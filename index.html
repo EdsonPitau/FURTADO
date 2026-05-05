@@ -442,7 +442,7 @@ const TUTORIAL_STEPS = {
         },
         {
             title: '🎴 Etapa 1 — Comprando do Monte',
-            text: 'Todo turno começa comprando uma carta. Feche este aviso e toque no botão "Monte" (azul) para comprar uma carta do baralho. Depois volte aqui tocando em qualquer lugar fora da tela.',
+            text: 'Todo turno começa comprando uma carta. Feche este aviso e toque no botão "Monte" (azul) para comprar uma carta do baralho. Depois volte aqui tocando no ícone do tutorial no canto inferior direito da tela.',
             highlight: 'btnDraw'
         },
         {
@@ -606,7 +606,7 @@ function showTutorialStep() {
     const btn = document.getElementById('tutorialNext');
     const isLast = tutorialStep === steps.length - 1;
     btn.textContent = isLast && tutorialPhase === 2 ? '🎮 Jogar agora!' :
-                      isLast ? 'Próxima rodada →' : 'Entendi →';
+                      isLast ? 'Próxima rodada →' : 'Próximo →';
 
     tutorialHighlighted.forEach(el => el && el.classList.remove('tutorial-highlight'));
     tutorialHighlighted = [];
