@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<meta name="apple-mobile-web-app-icon" content="./icon.png">
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,6 +31,9 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-g
 .game-header{display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:rgba(0,0,0,0.3);border-radius:8px;margin-bottom:5px;flex-wrap:wrap;gap:5px}
 .game-header span{font-size:0.9rem}
 .game-header .highlight{color:#ffd700;font-weight:bold}
+#timerBar{display:none;width:100%;height:6px;background:rgba(255,255,255,0.15);border-radius:3px;margin-bottom:4px;overflow:hidden;}
+#timerFill{height:100%;border-radius:3px;transition:width 1s linear;background:#4caf50;}
+#timerLabel{display:none;font-size:11px;color:#aaa;text-align:center;margin-bottom:4px;}
 .table-area{flex:1;background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;overflow-y:auto;min-height:200px;margin-bottom:5px}
 .table-area h3{margin-bottom:10px;font-size:0.9rem;opacity:0.8}
 .melds-container{display:flex;flex-wrap:wrap;gap:10px}
@@ -275,6 +279,23 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-g
     outline-offset: 3px !important;
     box-shadow: 0 0 0 6px rgba(200,168,75,0.3) !important;
 }
+
+/* === MULTIPLAYER === */
+#multiplayerScreen { justify-content:center; align-items:center; }
+.mp-card { background:#1a3a2a; border:1.5px solid #c8a84b; border-radius:16px; padding:24px 20px; width:min(380px,90vw); box-sizing:border-box; overflow:hidden; }
+.mp-card h2 { color:#c8a84b; margin-bottom:6px; }
+.mp-card p { color:#aaa; font-size:13px; text-align:center; margin-bottom:18px; }
+.mp-input { display:flex; flex-direction:column; gap:4px; margin-bottom:14px; }
+.mp-input label { font-size:13px; color:#aaa; }
+.mp-input input { padding:10px; border-radius:8px; border:1px solid #4a7a5a; background:#0d2a1a; color:#fff; font-size:15px; }
+.mp-btn-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:4px; width:100%; }
+.mp-btn-row .btn { width:100%; text-align:center; min-width:0; box-sizing:border-box; }
+.mp-code-box { background:rgba(0,0,0,0.3); border-radius:12px; padding:14px; text-align:center; margin-bottom:14px; }
+.mp-code-box .code { font-size:36px; font-weight:900; letter-spacing:8px; color:#c8a84b; }
+.mp-code-box .label { font-size:12px; color:#aaa; margin-top:4px; }
+.mp-players { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+.mp-player-item { background:rgba(255,255,255,0.05); border-radius:8px; padding:8px 12px; display:flex; align-items:center; gap:8px; font-size:14px; }
+#mpStatus { font-size:13px; color:#8aab8a; text-align:center; min-height:18px; margin-bottom:10px; }
 </style>
 </head>
 <body>
@@ -287,6 +308,7 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-g
                text-shadow:0 2px 12px rgba(0,0,0,0.6), 0 0 2px rgba(255,255,255,0.2);
                color:#e8e0c8; margin-bottom:40px;">FURTADO</h1>
     <button class="btn" onclick="showSetup()" style="width:min(280px,70vw); font-size:clamp(1rem,4vw,1.2rem); margin-bottom:16px;">▶️ Novo Jogo</button>
+    <button class="btn" onclick="showMultiplayer()" style="width:min(280px,70vw); font-size:clamp(1rem,4vw,1.2rem); margin-bottom:16px; background:linear-gradient(145deg,#1a6b8a,#0d4f6b);">🌐 Multijogador</button>
     <button class="btn btn-secondary" onclick="startTutorial()" style="width:min(280px,70vw); font-size:clamp(1rem,4vw,1.2rem); margin-bottom:16px;">🎓 Tutorial</button>
     <button class="btn btn-secondary" onclick="showRules()" style="width:min(280px,70vw); font-size:clamp(1rem,4vw,1.2rem);">📜 Regras</button>
   </div>
@@ -319,9 +341,47 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:linear-g
 </div>
 </div>
 
+
+<div id="multiplayerScreen" class="screen">
+  <div class="mp-card">
+    <h2>🌐 Multijogador</h2>
+    <p>Jogue com amigos em tempo real.<br>Crie uma sala ou entre com um código.</p>
+    <div class="mp-input">
+      <label>Seu nome:</label>
+      <input type="text" id="mpNome" value="Jogador" maxlength="16">
+    </div>
+    <div class="mp-btn-row" id="mpBtnRow">
+      <button class="btn" onclick="mpCriarSala()">➕ Criar Sala</button>
+      <button class="btn btn-secondary" onclick="mpMostrarEntrar()">🔑 Entrar</button>
+    </div>
+    <div id="mpEntrarDiv" style="display:none; margin-top:10px;">
+      <div class="mp-input">
+        <label>Código da sala:</label>
+        <input type="text" id="mpCodigo" maxlength="4" placeholder="ex: ABCD" style="text-transform:uppercase;letter-spacing:6px;font-size:22px;text-align:center;">
+      </div>
+      <button class="btn" onclick="mpEntrarSala()" style="width:100%; margin-top:6px;">▶️ Entrar na Sala</button>
+    </div>
+    <div id="mpSalaDiv" style="display:none; margin-top:16px;">
+      <div class="mp-code-box">
+        <div class="label">Código da sala</div>
+        <div class="code" id="mpCodigoDisplay"></div>
+        <div class="label">Compartilhe com seus amigos</div>
+      </div>
+      <div style="font-size:13px; color:#aaa; margin-bottom:8px;">Jogadores:</div>
+      <div class="mp-players" id="mpJogadoresList"></div>
+      <button class="btn" id="mpIniciarBtn" onclick="mpIniciarJogo()" style="width:100%; display:none; margin-bottom:8px;">🚀 Iniciar Partida</button>
+      <div id="mpAguardandoMsg" style="font-size:13px; color:#aaa; text-align:center; margin-bottom:8px;"></div>
+    </div>
+    <div id="mpStatus"></div>
+    <button class="btn btn-secondary" onclick="mpSair()" style="width:100%;">⬅️ Voltar</button>
+  </div>
+</div>
+
 <div id="gameScreen" class="screen">
 <div class="game-header">
 <span>🃏 <span class="highlight" id="roundDisplay">Rodada 1/10</span></span>
+<div id="timerLabel"></div>
+<div id="timerBar"><div id="timerFill"></div></div>
 <span id="rankingDisplay" style="font-size:0.8rem; background:rgba(0,0,0,0.2); padding:5px; border-radius:5px">🏆 FURTADO</span>
 </div>
 <div class="other-players" id="otherPlayers"></div>
@@ -671,6 +731,692 @@ function endTutorial() {
     showScreen('startScreen');
 }
 
+// ════════════════════════════════════════════════════════════════
+// MULTIPLAYER — Arquitetura robusta com fila de ações e reconexão
+// ════════════════════════════════════════════════════════════════
+
+const MP_CONFIG = {
+    apiKey: "AIzaSyCldo-vuSSsjMPEqxnHjhp4UPrwl3e7j4A",
+    authDomain: "furtado-b5ced.firebaseapp.com",
+    databaseURL: "https://furtado-b5ced-default-rtdb.firebaseio.com",
+    projectId: "furtado-b5ced",
+    storageBucket: "furtado-b5ced.firebasestorage.app",
+    messagingSenderId: "302161566673",
+    appId: "1:302161566673:web:58f019f93458416f0f4ca7"
+};
+
+// ── Estado global do multiplayer ──────────────────────────────
+let mpDB         = null;
+let mpSalaRef    = null;
+let mpSalaId     = null;
+let mpMeuId      = null;
+let mpMeuIdx     = 0;
+let mpEhHost     = false;
+let mpAtivo      = false;
+let mpListener   = null;   // referência única ao listener ativo
+
+// ── Fila de ações assíncronas (semáforo) ─────────────────────
+// Garante que atualizações remotas nunca colidem com ações locais
+let _mpFila      = [];
+let _mpProcessando = false;
+
+function mpEnfileirar(fn) {
+    _mpFila.push(fn);
+    if (!_mpProcessando) _mpProcessarFila();
+}
+
+function _mpProcessarFila() {
+    if (_mpFila.length === 0) { _mpProcessando = false; return; }
+    _mpProcessando = true;
+    const fn = _mpFila.shift();
+
+    // Timeout de segurança: se a fila travar por mais de 3s, desbloqueia
+    const safetyTimeout = setTimeout(() => {
+        console.warn('[MP fila] timeout de segurança — desbloqueando fila');
+        _mpProcessando = false;
+        _mpProcessarFila();
+    }, 3000);
+
+    try {
+        const result = fn();
+        if (result && typeof result.then === 'function') {
+            result
+                .then(() => { clearTimeout(safetyTimeout); setTimeout(_mpProcessarFila, 0); })
+                .catch(e => { clearTimeout(safetyTimeout); console.warn('[MP fila]', e); setTimeout(_mpProcessarFila, 0); });
+        } else {
+            clearTimeout(safetyTimeout);
+            setTimeout(_mpProcessarFila, 0);
+        }
+    } catch(e) {
+        clearTimeout(safetyTimeout);
+        console.warn('[MP fila exec]', e);
+        setTimeout(_mpProcessarFila, 0);
+    }
+}
+
+// ── Carregar Firebase sob demanda ─────────────────────────────
+function mpCarregarFirebase() {
+    if (mpDB) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        if (typeof firebase !== 'undefined' && firebase.apps) {
+            try {
+                if (!firebase.apps.length) firebase.initializeApp(MP_CONFIG);
+                mpDB = firebase.database();
+                return resolve();
+            } catch(e) { return reject(e); }
+        }
+        const carregarScript = (src) => new Promise((res, rej) => {
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = res;
+            s.onerror = () => rej(new Error('Falha ao carregar: ' + src));
+            document.head.appendChild(s);
+        });
+        carregarScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js')
+            .then(() => carregarScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js'))
+            .then(() => {
+                try {
+                    if (!firebase.apps.length) firebase.initializeApp(MP_CONFIG);
+                    mpDB = firebase.database();
+                    resolve();
+                } catch(e) { reject(e); }
+            })
+            .catch(e => reject(new Error('Sem internet ou Firebase indisponível.')));
+    });
+}
+
+// ── Utilitários ───────────────────────────────────────────────
+function mpGerarCodigo() {
+    const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return Array.from({length: 4}, () => c[Math.floor(Math.random() * c.length)]).join('');
+}
+
+function mpStatus(msg) {
+    const el = document.getElementById('mpStatus');
+    if (el) el.textContent = msg;
+}
+
+// ── Limpeza completa — remove listener antes de recriar ───────
+function mpLimpar() {
+    // 1. Remover listener ativo para evitar memory leak
+    if (mpListener && mpSalaRef) {
+        try { mpSalaRef.off('value', mpListener); } catch(e) {}
+        mpListener = null;
+    }
+    // 2. Remover sala se sou host
+    if (mpEhHost && mpSalaRef) {
+        try { mpSalaRef.remove(); } catch(e) {}
+    }
+    // 3. Cancelar onDisconnect pendente
+    if (mpSalaRef) {
+        try { mpSalaRef.onDisconnect().cancel(); } catch(e) {}
+    }
+    // 4. Parar watchdog de rede
+    if (_mpWatchdog) { clearTimeout(_mpWatchdog); _mpWatchdog = null; }
+    // 5. Limpar fila de ações
+    _mpFila = [];
+    _mpProcessando = false;
+    // 6. Resetar variáveis (incluindo guard de anti-regressão)
+    mpSalaRef = null; mpSalaId = null; mpMeuId = null;
+    mpEhHost = false; mpAtivo = false; mpMeuIdx = 0;
+    gameState.multiplayer = false;
+    gameState._mpUltimoTsRecebido = 0;
+    // 7. Resetar UI
+    const entrarDiv = document.getElementById('mpEntrarDiv');
+    const salaDiv   = document.getElementById('mpSalaDiv');
+    if (entrarDiv) entrarDiv.style.display = 'none';
+    if (salaDiv)   salaDiv.style.display   = 'none';
+}
+
+// ── Navegação ─────────────────────────────────────────────────
+function showMultiplayer() {
+    const entrarDiv = document.getElementById('mpEntrarDiv');
+    const salaDiv   = document.getElementById('mpSalaDiv');
+    if (entrarDiv) entrarDiv.style.display = 'none';
+    if (salaDiv)   salaDiv.style.display   = 'none';
+    mpStatus('');
+    showScreen('multiplayerScreen');
+}
+
+function mpMostrarEntrar() {
+    const el = document.getElementById('mpEntrarDiv');
+    if (el) el.style.display = 'block';
+}
+
+function mpSair() {
+    mpLimpar();
+    showScreen('startScreen');
+}
+
+// ── Criar sala ────────────────────────────────────────────────
+function mpCriarSala() {
+    if (mpAtivo || mpSalaId) { mpStatus('Você já está em uma sala.'); return; }
+    const nome = (document.getElementById('mpNome').value || 'Jogador').trim();
+    if (!nome) { mpStatus('Digite seu nome.'); return; }
+    const btn = document.querySelector('.mp-btn-row .btn');
+    if (btn) btn.disabled = true;
+    mpStatus('Conectando...');
+
+    mpCarregarFirebase()
+        .then(() => {
+            const codigo = mpGerarCodigo();
+            mpSalaId = codigo;
+            mpMeuId  = 'host';
+            mpEhHost = true;
+            mpSalaRef = mpDB.ref('salas/' + codigo);
+
+            return mpSalaRef.set({
+                status: 'aguardando', host: 'host',
+                jogadores: { host: { nome, id: 'host' } },
+                criado: Date.now()
+            });
+        })
+        .then(() => {
+            mpSalaRef.onDisconnect().remove();
+            const display = document.getElementById('mpCodigoDisplay');
+            const salaDiv = document.getElementById('mpSalaDiv');
+            if (display) display.textContent = mpSalaId;
+            if (salaDiv) salaDiv.style.display = 'block';
+            mpStatus('Sala criada! Aguardando jogadores...');
+            mpEscutar();
+        })
+        .catch(e => {
+            mpStatus('Erro ao criar sala: ' + e.message);
+            mpLimpar();
+            if (btn) btn.disabled = false;
+        });
+}
+
+// ── Entrar na sala ────────────────────────────────────────────
+function mpEntrarSala() {
+    if (mpAtivo || mpSalaId) { mpStatus('Você já está em uma sala.'); return; }
+    const nome   = (document.getElementById('mpNome').value || 'Jogador').trim();
+    const codigo = (document.getElementById('mpCodigo').value || '').trim().toUpperCase();
+    if (codigo.length !== 4) { mpStatus('Digite um código de 4 letras.'); return; }
+
+    const btn = document.querySelector('#mpEntrarDiv .btn');
+    if (btn) btn.disabled = true;
+    mpStatus('Buscando sala...');
+
+    mpCarregarFirebase()
+        .then(() => mpDB.ref('salas/' + codigo).once('value'))
+        .then(snap => {
+            if (!snap.exists()) throw new Error('Sala não encontrada.');
+            const sala = snap.val();
+            if (sala.status !== 'aguardando') throw new Error('Sala já em jogo.');
+            const jogs = Object.values(sala.jogadores || {});
+            if (jogs.length >= 4) throw new Error('Sala cheia (máximo 4 jogadores).');
+            if (jogs.some(j => j.nome.toLowerCase() === nome.toLowerCase()))
+                throw new Error('Nome já em uso. Escolha outro.');
+
+            mpSalaId  = codigo;
+            mpMeuId   = 'p' + Date.now();
+            mpEhHost  = false;
+            mpSalaRef = mpDB.ref('salas/' + codigo);
+
+            const jogRef = mpDB.ref('salas/' + codigo + '/jogadores/' + mpMeuId);
+            return jogRef.set({ nome, id: mpMeuId }).then(() => {
+                jogRef.onDisconnect().remove();
+            });
+        })
+        .then(() => {
+            const display  = document.getElementById('mpCodigoDisplay');
+            const salaDiv  = document.getElementById('mpSalaDiv');
+            const inicBtn  = document.getElementById('mpIniciarBtn');
+            const aguardMsg = document.getElementById('mpAguardandoMsg');
+            if (display)  display.textContent      = mpSalaId;
+            if (salaDiv)  salaDiv.style.display     = 'block';
+            if (inicBtn)  inicBtn.style.display     = 'none';
+            if (aguardMsg) aguardMsg.textContent    = 'Aguardando o host iniciar...';
+            mpStatus('Conectado!');
+            mpEscutar();
+        })
+        .catch(e => {
+            mpStatus(e.message);
+            if (btn) btn.disabled = false;
+            // Limpar estado parcial em caso de erro
+            if (!mpAtivo) { mpSalaRef = null; mpSalaId = null; mpMeuId = null; }
+        });
+}
+
+// ── Listener central — gerenciado com segurança ───────────────
+function mpEscutar() {
+    // Garantir que não há listener antigo acumulado
+    if (mpListener && mpSalaRef) {
+        try { mpSalaRef.off('value', mpListener); } catch(e) {}
+        mpListener = null;
+    }
+
+    let jaIniciou = false;
+
+    mpListener = mpSalaRef.on('value',
+        // Callback de sucesso
+        snap => {
+            try {
+                if (!snap.exists()) {
+                    if (!mpAtivo) {
+                        mpStatus('Sala encerrada.');
+                        setTimeout(() => { mpLimpar(); showScreen('startScreen'); }, 2000);
+                    }
+                    return;
+                }
+
+                const sala = snap.val();
+                const jogs = Object.values(sala.jogadores || {});
+
+                // Atualizar lista na tela de sala (antes do jogo começar)
+                if (!mpAtivo) {
+                    const listEl = document.getElementById('mpJogadoresList');
+                    if (listEl) {
+                        listEl.innerHTML = jogs.map(j =>
+                            `<div class="mp-player-item">${j.id === sala.host ? '👑' : '🎮'} <span>${j.nome}</span></div>`
+                        ).join('');
+                    }
+                    if (mpEhHost) {
+                        const btn = document.getElementById('mpIniciarBtn');
+                        const msg = document.getElementById('mpAguardandoMsg');
+                        if (btn) btn.style.display = jogs.length >= 2 ? 'block' : 'none';
+                        if (msg) msg.textContent = jogs.length < 2 ? 'Aguardando pelo menos 1 jogador...' : '';
+                    }
+                }
+
+                // Iniciar partida — executa uma única vez
+                if (sala.status === 'jogando' && sala.gameState && !jaIniciou) {
+                    jaIniciou = true;
+                    mpAtivo = true;
+                    mpEnfileirar(() => mpIniciarPartida(sala));
+                    return;
+                }
+
+                // Receber atualizações durante o jogo
+                if (sala.status === 'jogando' && sala.gameState && mpAtivo) {
+                    const remoteState = sala.gameState;
+                    const meuIdx = gameState.mpMeuIdx !== undefined ? gameState.mpMeuIdx : 0;
+
+                    // ── Guard 1: Ignorar publicações minhas (anti-bumerangue) ──
+                    if (remoteState._publicadoPor === mpMeuId) {
+                        console.debug('[MP] ignorando eco próprio ts:', remoteState.ts);
+                        return;
+                    }
+
+                    // ── Guard 2: Não sobrescrever ação local em andamento ──
+                    const estouJogando = gameState.hasDrawn && gameState.currentPlayer === meuIdx;
+                    const aindaMinhaVez = remoteState.currentPlayer === meuIdx;
+                    // Exceção: sempre aplicar fim de rodada/jogo mesmo que seja minha vez
+                    const ehTransicaoCritica = remoteState.roundEnded || remoteState.gameOver;
+                    if (estouJogando && aindaMinhaVez && !ehTransicaoCritica) {
+                        console.debug('[MP] ignorando — estou jogando ativamente');
+                        return;
+                    }
+                    // Guard extra: ignorar estado que regride hasDrawn durante meu turno
+                    // (estado antigo chegando atrasado que reporia minha compra do monte)
+                    if (aindaMinhaVez && gameState.hasDrawn && !remoteState.hasDrawn && !ehTransicaoCritica) {
+                        console.debug('[MP] ignorando — estado regressivo de hasDrawn');
+                        return;
+                    }
+
+                    // ── Guard 3: Não regredir — ignorar estados mais antigos ──
+                    if (gameState._mpUltimoTsRecebido && remoteState.ts <= gameState._mpUltimoTsRecebido) {
+                        console.debug('[MP] ignorando estado mais antigo ts:', remoteState.ts);
+                        return;
+                    }
+                    gameState._mpUltimoTsRecebido = remoteState.ts;
+
+                    // ── Limpar fila obsoleta antes de aplicar novo estado ──
+                    if (_mpFila.length > 0 && !_mpProcessando) {
+                        console.debug('[MP] limpando fila obsoleta de', _mpFila.length, 'itens');
+                        _mpFila = [];
+                    }
+
+                    // ── Aplicar estado remoto ──
+                    if (!_mpProcessando) {
+                        mpAplicarEstado(remoteState);
+                    } else {
+                        mpEnfileirar(() => mpAplicarEstado(remoteState));
+                    }
+                }
+            } catch(e) {
+                console.error('[MP listener]', e);
+            }
+        },
+        // Callback de erro do listener
+        err => {
+            console.error('[MP listener erro]', err);
+            mpStatus('Conexão perdida. Tentando reconectar...');
+            // Tentar reconectar após 3 segundos
+            setTimeout(() => {
+                if (mpSalaId && mpSalaRef) {
+                    // Zerar anti-regressão para aceitar o estado atual após reconexão
+                    gameState._mpUltimoTsRecebido = 0;
+                    mpEscutar();
+                } else {
+                    mpStatus('Não foi possível reconectar.');
+                    setTimeout(() => { mpLimpar(); showScreen('startScreen'); }, 2000);
+                }
+            }, 3000);
+        }
+    );
+}
+
+// ── Iniciar jogo (host) ───────────────────────────────────────
+function mpIniciarJogo() {
+    if (!mpEhHost) return;
+    const btn = document.getElementById('mpIniciarBtn');
+    if (btn) btn.disabled = true;
+
+    mpDB.ref('salas/' + mpSalaId + '/jogadores').once('value')
+        .then(snap => {
+            const raw  = snap.val() || {};
+            // Ordem determinística por chave — igual em todos os dispositivos
+            const jogs = Object.keys(raw).sort().map(k => raw[k]);
+            const deck = createDeck();
+            const players = jogs.map((j, i) => ({
+                id: i, firebaseId: j.id, name: j.nome, isBot: false,
+                hand: Array.from({length: 9}, () => deck.pop()),
+                hasMeldedThisTurn: false, totalScore: 0, discardMemory: {}
+            }));
+            const estado = {
+                players, deck,
+                discardPile: [], tableMelds: [],
+                currentPlayer: 0, round: 1, firstPlayerOfRound: 0,
+                phase: 'draw', hasDrawn: false,
+                canTakeDiscard: false, discardSelected: false,
+                discardPendingCard: null, selectedCards: [],
+                selectedTableCards: [], selectedMeld: null,
+                cardsExtractedThisTurn: [], roundEnded: false,
+                gameOver: false, wins: Array(players.length).fill(0),
+                gameLog: [], difficulty: 'beginner',
+                _publicadoPor: mpMeuId, ts: Date.now()
+            };
+            return mpSalaRef.update({ status: 'jogando', gameState: estado });
+        })
+        .catch(e => {
+            console.error('[MP iniciarJogo]', e);
+            mpStatus('Erro ao iniciar: ' + e.message);
+            if (btn) btn.disabled = false;
+        });
+}
+
+// ── Iniciar partida localmente (todos os jogadores) ───────────
+function mpIniciarPartida(sala) {
+    try {
+        const estado = sala.gameState;
+        mpMeuIdx = estado.players.findIndex(p => p.firebaseId === mpMeuId);
+        if (mpMeuIdx === -1) mpMeuIdx = 0;
+        gameState.multiplayer = true;
+        gameState.mpMeuIdx   = mpMeuIdx;
+        gameState.mpSalaId   = mpSalaId;
+        gameState._mpUltimoTsRecebido = 0;   // garantir sem resíduo de sessão anterior
+        mpAplicarEstado(estado);
+        showScreen('gameScreen');
+        mpStatus('');
+        // Iniciar timer se for minha vez logo no início
+        setTimeout(() => timerIniciarCompra(), 300);
+    } catch(e) {
+        console.error('[MP iniciarPartida]', e);
+        mpStatus('Erro ao iniciar partida.');
+        mpLimpar();
+        showScreen('startScreen');
+    }
+}
+
+// ── Aplicar estado recebido do Firebase ───────────────────────
+function mpAplicarEstado(estado) {
+    if (!estado) return;
+
+    // Preservar valores locais não transmitidos pelo Firebase
+    const meuIdx        = gameState.mpMeuIdx;
+    const isMultiplayer = gameState.multiplayer;
+    const salaId        = gameState.mpSalaId;
+    const eraRoundEnded    = gameState.roundEnded;
+    const eraGameOver      = gameState.gameOver;
+    const eraCurrentPlayer = gameState.currentPlayer;
+    const eraRound         = gameState.round;          // ← salvar ANTES de sobrescrever
+
+    try {
+        gameState.players               = estado.players;
+        gameState.deck                  = estado.deck                  || [];
+        gameState.discardPile           = estado.discardPile           || [];
+        gameState.tableMelds            = estado.tableMelds            || [];
+        gameState.currentPlayer         = estado.currentPlayer;
+        gameState.round                 = estado.round;
+        gameState.firstPlayerOfRound    = estado.firstPlayerOfRound    || 0;
+        gameState.phase                 = estado.phase;
+        gameState.hasDrawn              = estado.hasDrawn;
+        gameState.canTakeDiscard        = estado.canTakeDiscard;
+        gameState.discardSelected       = estado.discardSelected       || false;
+        gameState.discardPendingCard    = estado.discardPendingCard    || null;
+        gameState.cardsExtractedThisTurn = estado.cardsExtractedThisTurn || [];
+        gameState.roundEnded            = estado.roundEnded;
+        gameState.gameOver              = estado.gameOver;
+        gameState.wins                  = estado.wins                  || [];
+        gameState.gameLog               = estado.gameLog               || [];
+        gameState.selectedCards         = [];
+        gameState.selectedTableCards    = [];
+        gameState.selectedMeld          = null;
+    } catch(e) {
+        console.error('[MP aplicarEstado] erro ao aplicar campos:', e);
+        return;
+    }
+
+    // Restaurar valores locais (não vêm do Firebase)
+    gameState.multiplayer = isMultiplayer;
+    gameState.mpMeuIdx    = meuIdx;
+    gameState.mpSalaId    = salaId;
+    // Resetar guard anti-regressão ao iniciar nova rodada
+    // Usa eraRound (salvo ANTES de sobrescrever) para a comparação ser válida
+    if (estado.round !== undefined && estado.round !== eraRound) {
+        gameState._mpUltimoTsRecebido = 0;
+    }
+
+    // ── Transições de estado ──────────────────────────────────
+
+    // Fim de jogo
+    if (!eraGameOver && estado.gameOver) {
+        endGame(); return;
+    }
+
+    // Fim de rodada recebido do outro jogador
+    if (!eraRoundEnded && estado.roundEnded && estado._mpWinner !== undefined && estado._mpWinner !== null) {
+        const winnerName = (estado.players[estado._mpWinner] || {}).name || 'Jogador';
+        timerStop();
+        if (estado.gameOver) { endGame(); return; }
+        showMessage('Fim da Rodada', `Vencedor: ${winnerName}\n\nPróxima rodada em 3 segundos...`);
+        setTimeout(() => {
+            hideMessage();
+            // O host SEMPRE é responsável por iniciar a próxima rodada
+            // mesmo quando recebe o fim de rodada via Firebase (oponente ganhou)
+            if (mpEhHost) startRound();
+        }, 3500);
+        return;
+    }
+
+    // Nova rodada chegando (roundEnded voltou a false)
+    if (eraRoundEnded && !estado.roundEnded) {
+        hideMessage();
+        timerStop();
+        updateUI(); updateButtons();
+        setTimeout(() => timerIniciarCompra(), 200);
+        return;
+    }
+
+    // Mudança de vez para mim
+    if (eraCurrentPlayer !== estado.currentPlayer && estado.currentPlayer === meuIdx) {
+        timerStop();
+        updateUI(); updateButtons();
+        setTimeout(() => timerIniciarCompra(), 200);
+        return;
+    }
+
+    updateUI(); updateButtons();
+}
+
+// ── Publicar estado no Firebase ───────────────────────────────
+// ── Watchdog: libera a interface se a rede não responder em 8s ─
+let _mpWatchdog = null;
+
+function mpWatchdogReset() {
+    if (_mpWatchdog) clearTimeout(_mpWatchdog);
+    if (!gameState.multiplayer || !mpAtivo) return;
+    _mpWatchdog = setTimeout(() => {
+        console.warn('[MP watchdog] Timeout de rede — liberando interface');
+        // Não travar: forçar atualização da UI sem aguardar Firebase
+        try { updateUI(); updateButtons(); } catch(e) {}
+        mpStatus('Conexão lenta — tentando reconectar...');
+        // Tentar reconectar o listener
+        if (mpSalaRef && mpSalaId) {
+            try { mpEscutar(); } catch(e) {}
+        }
+    }, 8000);
+}
+
+function mpPublicar() {
+    if (!gameState.multiplayer || !mpSalaId || !mpAtivo || !mpDB) return;
+
+    // Combinar Date.now() com performance.now() para unicidade mesmo com clock skew
+    const ts = Date.now() + (typeof performance !== 'undefined' ? (performance.now() % 1) : Math.random());
+    gameState._mpUltimoTs = ts;
+    mpWatchdogReset();
+
+    // Deep clone via JSON para garantir snapshot imutável
+    // Evita que mutações posteriores do gameState corrompam o payload
+    let payload;
+    try {
+        payload = JSON.parse(JSON.stringify({
+            players:               gameState.players,
+            deck:                  gameState.deck,
+            discardPile:           gameState.discardPile,
+            tableMelds:            gameState.tableMelds,
+            currentPlayer:         gameState.currentPlayer,
+            round:                 gameState.round,
+            firstPlayerOfRound:    gameState.firstPlayerOfRound,
+            phase:                 gameState.phase,
+            hasDrawn:              gameState.hasDrawn,
+            canTakeDiscard:        gameState.canTakeDiscard,
+            discardSelected:       gameState.discardSelected       || false,
+            discardPendingCard:    gameState.discardPendingCard    || null,
+            cardsExtractedThisTurn: gameState.cardsExtractedThisTurn || [],
+            roundEnded:            gameState.roundEnded,
+            gameOver:              gameState.gameOver,
+            wins:                  gameState.wins                  || [],
+            gameLog:               gameState.gameLog               || [],
+            _mpWinner:             gameState._mpWinner !== undefined ? gameState._mpWinner : null,
+            _publicadoPor:         mpMeuId,
+            ts
+        }));
+    } catch(e) {
+        console.error('[mpPublicar] erro ao serializar estado:', e);
+        return;
+    }
+
+    mpDB.ref('salas/' + mpSalaId + '/gameState')
+        .set(payload)
+        .then(() => {
+            console.debug('[MP] estado publicado — turno:', payload.currentPlayer, 'ts:', ts);
+        })
+        .catch(e => {
+            console.error('[mpPublicar] falha na rede:', e.message);
+            // Não bloquear — o estado local já está correto
+        });
+}
+
+function mpReceberEstado(estado) { mpAplicarEstado(estado); }
+
+function mpMeuPlayer() {
+    const idx = (gameState.multiplayer && gameState.mpMeuIdx !== undefined) ? gameState.mpMeuIdx : 0;
+    return (gameState.players && gameState.players[idx]) ? gameState.players[idx] : { hand: [], name: 'Você', id: idx };
+}
+
+function mpEhMinhaTez() {
+    if (!gameState.multiplayer) return gameState.currentPlayer === 0;
+    return gameState.currentPlayer === (gameState.mpMeuIdx || 0);
+}
+
+// ========================
+// TIMER DE JOGADA
+// ========================
+let timerInterval = null;
+let timerSecondsLeft = 0;
+
+function timerStart(seconds, label, onExpire) {
+    timerStop();
+    timerSecondsLeft = seconds;
+    const bar = document.getElementById('timerBar');
+    const fill = document.getElementById('timerFill');
+    const lbl = document.getElementById('timerLabel');
+    if (!bar || !fill || !lbl) return;
+    bar.style.display = 'block';
+    lbl.style.display = 'block';
+    lbl.textContent = label + ': ' + seconds + 's';
+    fill.style.width = '100%';
+    fill.style.background = '#4caf50';
+
+    timerInterval = setInterval(() => {
+        timerSecondsLeft--;
+        const pct = (timerSecondsLeft / seconds) * 100;
+        fill.style.width = pct + '%';
+        fill.style.background = timerSecondsLeft <= 5 ? '#e74c3c' : timerSecondsLeft <= 10 ? '#f39c12' : '#4caf50';
+        lbl.textContent = label + ': ' + timerSecondsLeft + 's';
+        if (timerSecondsLeft <= 0) {
+            timerStop();
+            onExpire();
+        }
+    }, 1000);
+}
+
+function timerStop() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    const bar = document.getElementById('timerBar');
+    const lbl = document.getElementById('timerLabel');
+    if (bar) bar.style.display = 'none';
+    if (lbl) lbl.style.display = 'none';
+}
+
+function timerIniciarCompra() {
+    if (!gameState.multiplayer) return;
+    if (!mpEhMinhaTez()) return;
+    timerStart(10, '⏱ Comprar', () => {
+        // Tempo esgotado — comprar do monte automaticamente
+        if (!gameState.hasDrawn && mpEhMinhaTez()) {
+            drawFromDeck();
+        }
+    });
+}
+
+function timerIniciarJogada() {
+    if (!gameState.multiplayer) return;
+    if (!mpEhMinhaTez()) return;
+    timerStart(20, '⏱ Jogar', () => {
+        // Tempo esgotado — descartar a carta de maior valor automaticamente
+        if (mpEhMinhaTez() && gameState.hasDrawn) {
+            const p = mpMeuPlayer();
+            if (p.hand.length === 0) return;
+            // Encontrar carta de maior valor (não coringa)
+            let maxIdx = -1, maxPts = -1;
+            p.hand.forEach((c, i) => {
+                if (!c.isJoker) {
+                    const pts = POINTS[c.rank] || 0;
+                    if (pts > maxPts) { maxPts = pts; maxIdx = i; }
+                }
+            });
+            if (maxIdx === -1) maxIdx = 0; // fallback: primeira carta
+            gameState.selectedCards = [p.hand[maxIdx].id];
+            discardCard();
+        }
+    });
+}
+
+
+function reordenarSequencia(meld) {
+    if (!meld || meld.type !== 'sequence') return;
+    meld.cards.sort((a, b) => {
+        const va = a.isJoker ? (a.jokerValue === 'A' ? 1 : (RANK_VALUES[a.jokerValue] || 0)) : a.value;
+        const vb = b.isJoker ? (b.jokerValue === 'A' ? 1 : (RANK_VALUES[b.jokerValue] || 0)) : b.value;
+        return va - vb;
+    });
+}
+
+// ========================
 function log(msg) {
     gameState.gameLog.unshift(`[R${gameState.round}] ${msg}`);
     if (gameState.gameLog.length > 200) gameState.gameLog.pop();
@@ -726,7 +1472,7 @@ function showScreen(id) {
     document.getElementById(id).classList.add('active');
 }
 function showSetup() { showScreen('setupScreen'); updatePlayerInputs(); }
-function showStart() { gameState.gameOver = false; showScreen('startScreen'); }
+function showStart() { gameState.gameOver = false; if(gameState.multiplayer){mpLimpar();} showScreen('startScreen'); }
 
 function showRules() {
     const rulesHTML = `<div style="text-align:left;"><div class="regras-container"><h2>APRENDA A JOGAR</h2><p><b>FURTADO</b> é um jogo de estratégia e manipulação de cartas para 2 a 4 jogadores. O objetivo é acumular a menor pontuação total ao longo de 10 rodadas, livrando-se de todas as cartas da mão o mais rápido possível.</p><h3>1. Componentes e Preparação</h3><ul><li><b>Baralho:</b> 108 cartas (2 baralhos padrão de 52 cartas + 4 Coringas).</li><li><b>Jogadores:</b> 2 a 4.</li><li><b>Distribuição:</b> 9 cartas para cada jogador.</li><li><b>Monte:</b> Cartas restantes viradas para baixo.</li><li><b>Lixo:</b> Pilha de descartes, apenas a carta do topo é visível.</li></ul><h3>2. Estrutura do Turno</h3><ul><li><b>Fase 1 — Compra (obrigatória):</b> Compre 1 carta do Monte ou do Lixo. <b>Importante:</b> Antes de comprar, NÃO pode realizar ações na mesa.</li><li><b>Fase 2 — Ações de Mesa (opcional):</b> Após comprar, pode baixar jogos, adicionar cartas, reorganizar a mesa ou roubar coringas.</li><li><b>Fase 3 — Descarte (obrigatória):</b> Descarte 1 carta no Lixo. Se bateu (mão vazia), não descarta.</li></ul><h3>3. Definição de Jogos</h3><ul><li><b>Sequências:</b> Cartas do MESMO naipe em ordem numérica crescente: A-2-3-4-5-6-7-8-9-10-J-Q-K. <b>Ás só vale 1</b> — NÃO existe Q-K-A nem K-A-2. Nenhuma carta pode se repetir (mesmo valor E mesmo naipe).</li><li><b>Grupos (Sets):</b> Cartas de MESMO valor, independente de naipe. Pode ter de 3 a 12 cartas. <b>Cartas idênticas podem se repetir</b> (mesmo valor E mesmo naipe).</li></ul><h3>4. Regra do Lixo</h3><ul><li>A carta do Lixo só pode ser coletada se for usada IMEDIATAMENTE para formar um NOVO jogo na mesa.</li><li>Deve ser combinada com pelo menos 2 cartas da mão (total mínimo 3 cartas).</li><li><b>Proibições:</b> Não pode usar sozinha, não pode adicionar a jogo existente, não pode usar para roubar coringa.</li></ul><h3>5. O Coringa</h3><ul><li>Substitui qualquer carta específica. Valor é determinado automaticamente pela posição no jogo.</li><li>Em sequências: assume valor E naipe específicos.</li><li>Em grupos: assume apenas um valor (sem naipe).</li><li><b>Uma vez determinado, o valor é definitivo.</b></li><li><b>Restrição:</b> Coringa NUNCA pode mudar de tipo (sequência ↔ grupo).</li></ul><h3>6. Roubo de Coringa</h3><ul><li>Substitua coringa na mesa pela carta real correspondente e leve-o para a mão.</li><li>Sequência: carta real deve ter mesmo valor E naipe do coringa.</li><li>Grupo: carta real deve ter mesmo valor do coringa (naipe não importa).</li><li><b>Restrições:</b> Só pode usar cartas da própria mão. Não pode usar coringa da mão. Não pode roubar se jogo ficar com menos de 3 cartas. Não pode usar cartas do Lixo ou de outros jogos da mesa.</li></ul><h3>7. Movimentação Livre</h3><ul><li>Reorganize cartas da mesa para criar novos jogos válidos.</li><li>Todos os jogos resultantes devem ter mínimo 3 cartas.</li><li>Nenhuma carta pode retornar à mão.</li><li>Coringas mantêm seu valor/naipe declarado (não mudam de tipo).</li></ul><h3>8. Adição de Cartas</h3><ul><li>Pode adicionar 1+ cartas da mão a qualquer jogo na mesa.</li><li>Em sequências: carta deve completar a ordem numérica correta.</li><li>Em grupos: carta deve ter mesmo valor do grupo.</li><li>Não pode criar duplicatas em sequências.</li></ul><h3>9. Contagem de Pontos</h3><table><thead><tr><th>CARTA</th><th>PONTUAÇÃO</th></tr></thead><tbody><tr><td>A (Ás)</td><td>1 ponto</td></tr><tr><td>2 a 10</td><td>Valor da face</td></tr><tr><td>J</td><td>11 pts</td></tr><tr><td>Q</td><td>12 pts</td></tr><tr><td>K</td><td>13 pts</td></tr><tr><td>Coringa</td><td>20 pts</td></tr></tbody></table></div></div>`;
@@ -759,14 +1505,20 @@ function showScoreboard() {
 function hideScoreboard() { document.getElementById('scoreModal').classList.remove('active'); }
 
 function updatePlayerInputs() {
-    const n = parseInt(document.getElementById('numPlayers').value);
-    const container = document.getElementById('playerInputs');
-    let html = '';
-    const defaults = ['Você','Bot 1','Bot 2','Bot 3'];
-    for (let i = 1; i <= n; i++) {
-        html += `<div class="player-input"><label>Jogador ${i}:</label><input type="text" id="p${i}name" value="${defaults[i-1]}"></div>`;
+    try {
+        const numEl = document.getElementById('numPlayers');
+        const container = document.getElementById('playerInputs');
+        if (!numEl || !container) return;
+        const n = parseInt(numEl.value) || 2;
+        const defaults = ['Você','Bot 1','Bot 2','Bot 3'];
+        let html = '';
+        for (let i = 1; i <= n; i++) {
+            html += `<div class="player-input"><label>Jogador ${i}:</label><input type="text" id="p${i}name" value="${defaults[i-1]}"></div>`;
+        }
+        container.innerHTML = html;
+    } catch(e) {
+        console.error('[updatePlayerInputs]', e);
     }
-    container.innerHTML = html;
 }
 
 // ========================
@@ -812,22 +1564,32 @@ function startGame() {
 }
 
 function startRound() {
+    // No multiplayer, apenas o host recria o deck e distribui as cartas
+    if (gameState.multiplayer && !mpEhHost) {
+        // Oponente apenas aguarda o estado chegar via Firebase
+        return;
+    }
+
     gameState.deck = createDeck(); gameState.discardPile = []; gameState.tableMelds = [];
     gameState.currentPlayer = gameState.firstPlayerOfRound; gameState.phase = 'draw'; gameState.selectedCards = [];
     gameState.selectedMeld = null; gameState.selectedTableCards = []; gameState.hasDrawn = false;
     gameState.canTakeDiscard = false; gameState.discardPendingCard = null; gameState.discardSelected = false; gameState.gameOver = false;
     gameState.cardsExtractedThisTurn = [];
     gameState.roundEnded = false;
+    gameState._mpWinner = undefined;
     for (let p of gameState.players) {
         p.hand = []; p.hasMeldedThisTurn = false;
-        p.discardMemory = {}; // limpar memória de descartes a cada rodada
+        p.discardMemory = {};
         for (let i = 0; i < 9; i++) {
             if (gameState.deck.length > 0) p.hand.push(gameState.deck.pop());
         }
         sortCards(p.hand);
     }
+    mpPublicar();
     updateUI();
-    if (gameState.players[gameState.currentPlayer].isBot) setTimeout(botTurn, 1000);
+    if (!gameState.multiplayer && gameState.players[gameState.currentPlayer].isBot) setTimeout(botTurn, 1000);
+    // Iniciar timer se for minha vez na primeira rodada
+    setTimeout(() => timerIniciarCompra(), 100);
 }
 
 function sortCards(hand) {
@@ -839,7 +1601,12 @@ function sortCards(hand) {
         return a.value - b.value;
     });
 }
-function sortHand() { sortCards(gameState.players[0].hand); updateUI(); }
+function sortHand() {
+    sortCards(mpMeuPlayer().hand);
+    updateUI();
+    // Publicar para que o oponente não veja a mão na ordem antiga (anti-bumerangue)
+    try { mpPublicar(); } catch(e) {}
+}
 
 // ========================
 // VALIDAÇÃO DE JOGOS
@@ -867,10 +1634,10 @@ function isValidMeld(cards) {
                 }
             }
         }
-        return {type: 'sequence', cards: cards, suit: seq.suit};
+        return {type: 'sequence', cards: cards, validatedCards: seq.validatedCards || cards, suit: seq.suit};
     }
     const same = isValidSameValue(cards); 
-    if (same) return {type: 'same', cards: cards};
+    if (same) return {type: 'same', cards: cards, validatedCards: cards};
     return false;
 }
 
@@ -993,6 +1760,7 @@ function isValidSameValue(cards) {
     const baseVal = real[0].value;
     if (!real.every(c => c.value === baseVal)) return false;
     const baseRank = real[0].rank;
+    // Atribuir jokerValue nas cartas originais (necessário para renderização)
     cards.filter(c => c.isJoker).forEach(j => {
         j.jokerValue = baseRank;
         j.jokerSuit = null;
@@ -1020,7 +1788,13 @@ function canAddToMeld(meld, card) {
     const result = isValidMeld(testCards);
     if (!result) return false;
 
+    // O tipo do jogo resultante deve ser igual ao tipo original
+    if (result.type !== meld.type) return false;
+
+    // Em sequências: verificar naipe e não permitir duplicatas
     if (meld.type === 'sequence') {
+        // Naipe deve ser o mesmo
+        if (!card.isJoker && card.suit !== meld.suit) return false;
         if (!card.isJoker) {
             const alreadyExists = meld.cards.some(c => {
                 if (!c.isJoker) return c.rank === card.rank && c.suit === card.suit;
@@ -1036,6 +1810,14 @@ function canAddToMeld(meld, card) {
             if (alreadyExists) return false;
         }
     }
+
+    // Em grupos: a carta deve ter o mesmo valor do grupo
+    if (meld.type === 'same') {
+        const groupRank = meld.cards.find(c => !c.isJoker)?.rank ||
+                          meld.cards.find(c => c.isJoker && c.jokerValue)?.jokerValue;
+        if (groupRank && !card.isJoker && card.rank !== groupRank) return false;
+    }
+
     return true;
 }
 
@@ -1055,23 +1837,25 @@ function selectCard(cardId) {
 }
 
 function selectMeld(meldIdx) { 
-    if (!gameState.hasDrawn && gameState.currentPlayer === 0) { 
+    if (!gameState.hasDrawn && mpEhMinhaTez()) { 
         return showMessage('Aviso', 'Primeiro compre uma carta do monte ou do lixo.'); 
     }
     gameState.selectedMeld = (gameState.selectedMeld === meldIdx) ? null : meldIdx; 
-    if (gameState.selectedMeld !== null) { gameState.selectedTableCards = []; }
+    if (gameState.selectedMeld !== null) { 
+        gameState.selectedTableCards = []; 
+    }
     updateUI(); updateButtons(); 
 }
 
 function selectTableCard(meldIdx, cardIdx) {
-    if (!gameState.hasDrawn && gameState.currentPlayer === 0) { 
+    if (!gameState.hasDrawn && mpEhMinhaTez()) { 
         return showMessage('Aviso', 'Primeiro compre uma carta do monte ou do lixo.'); 
     }
     const key = meldIdx + '-' + cardIdx;
     const idx = gameState.selectedTableCards.indexOf(key);
     if (idx >= 0) gameState.selectedTableCards.splice(idx, 1);
     else gameState.selectedTableCards.push(key);
-    if (gameState.selectedTableCards.length > 0) { gameState.selectedMeld = null; }
+    gameState.selectedMeld = null;
     updateUI(); updateButtons();
 }
 
@@ -1084,7 +1868,7 @@ function saveMesaSnapshot() {
     // Salva apenas na PRIMEIRA ação de mesa do turno — não na compra
     if (turnSnapshot) return; // já tem snapshot, não sobrescreve
     turnSnapshot = {
-        hand: gameState.players[0].hand.map(c => deepCopyCard(c)),
+        hand: mpMeuPlayer().hand.map(c => deepCopyCard(c)),
         tableMelds: gameState.tableMelds.map(m => ({
             type: m.type, suit: m.suit, owner: m.owner,
             cards: m.cards.map(c => deepCopyCard(c))
@@ -1097,7 +1881,8 @@ function saveMesaSnapshot() {
 
 function undoTurn() {
     if (!turnSnapshot) return;
-    const p = gameState.players[0];
+    if (!mpEhMinhaTez()) return;
+    const p = mpMeuPlayer();
     p.hand = turnSnapshot.hand;
     p.hasMeldedThisTurn = turnSnapshot.hasMeldedThisTurn;
     gameState.tableMelds = turnSnapshot.tableMelds;
@@ -1108,13 +1893,15 @@ function undoTurn() {
     gameState.selectedMeld = null;
     gameState.hasDrawn = true;
     gameState.phase = 'meld';
-    log('Você desfez as jogadas desta vez.');
+    log(`${mpMeuPlayer().name} desfez as jogadas desta vez.`);
     turnSnapshot = null;
     updateUI(); updateButtons();
+    try { mpPublicar(); } catch(e) { console.error('[undoTurn]', e); }
 }
 
 function drawFromDeck() {
-    if (gameState.gameOver || gameState.currentPlayer !== 0 || gameState.hasDrawn) return;
+    if (gameState.gameOver || gameState.hasDrawn) return;
+    if (!mpEhMinhaTez()) return;
     if (gameState.deck.length === 0) {
         if (gameState.discardPile.length > 1) {
             const topDiscard = gameState.discardPile.pop();
@@ -1134,15 +1921,20 @@ function drawFromDeck() {
             return;
         }
     }
-    gameState.players[0].hand.push(gameState.deck.pop());
+    const _p = mpMeuPlayer();
+    _p.hand.push(gameState.deck.pop());
     gameState.hasDrawn = true; gameState.phase = 'meld';
-    const drawnCard = gameState.players[0].hand[gameState.players[0].hand.length - 1];
-    log(`Você comprou o ${descCard(drawnCard)} do monte.`);
+    const drawnCard = _p.hand[_p.hand.length - 1];
+    log(`${mpMeuPlayer().name} comprou o ${descCard(drawnCard)} do monte.`);
+    timerStop();
+    setTimeout(() => timerIniciarJogada(), 100);
+    mpPublicar();
     updateUI(); updateButtons();
 }
 
 function tryTakeDiscard() {
-    if (gameState.gameOver || gameState.currentPlayer !== 0 || gameState.hasDrawn || gameState.discardPile.length === 0) return;
+    if (gameState.gameOver || gameState.hasDrawn || gameState.discardPile.length === 0) return;
+    if (!mpEhMinhaTez()) return;
     const topCard = gameState.discardPile[gameState.discardPile.length - 1];
 
     // Se já está selecionada, cancelar seleção
@@ -1154,7 +1946,7 @@ function tryTakeDiscard() {
     }
 
     if (gameState.selectedCards.length < 2) return showMessage('Aviso', 'Selecione pelo menos 2 cartas da sua mão primeiro.');
-    const handCards = gameState.players[0].hand.filter(c => gameState.selectedCards.includes(c.id));
+    const handCards = mpMeuPlayer().hand.filter(c => gameState.selectedCards.includes(c.id));
     const testMeld = [...handCards, topCard];
     const valid = isValidMeld(testMeld);
     if (!valid) return showMessage('Inválido', 'As cartas não formam jogo válido com a carta do lixo.');
@@ -1163,7 +1955,10 @@ function tryTakeDiscard() {
     gameState.discardSelected = true;
     gameState.discardPendingCard = topCard;
     gameState.canTakeDiscard = true;
+    timerStop();
+    setTimeout(() => timerIniciarJogada(), 100);
     updateUI(); updateButtons();
+    try { mpPublicar(); } catch(e) { console.error('[tryTakeDiscard]', e); }
 }
 
 function cancelTakeDiscard() {
@@ -1181,7 +1976,8 @@ function cancelTakeDiscard() {
 
 function createMeld() {
     if (gameState.gameOver) return;
-    const p = gameState.players[0]; 
+    if (!mpEhMinhaTez()) return;
+    const p = mpMeuPlayer(); 
     let selected = p.hand.filter(c => gameState.selectedCards.includes(c.id));
     if (gameState.canTakeDiscard && gameState.discardPendingCard) {
         selected.push(gameState.discardPendingCard);
@@ -1207,12 +2003,14 @@ function createMeld() {
                 gameState.hasDrawn = true;
                 gameState.phase = 'meld';
             }
-            gameState.tableMelds.push({type: 'sequence', cards: selected, suit: valid.suit, owner: 0}); 
+            gameState.tableMelds.push({type: 'sequence', cards: selected, suit: valid.suit, owner: gameState.multiplayer ? gameState.mpMeuIdx : 0}); 
             p.hasMeldedThisTurn = true;
             gameState.selectedCards = []; 
-            log(`Você comprou o ${descCard(selected[selected.length-1])} do lixo e baixou ${descMeld({type: valid.type || 'sequence', suit: valid.suit, cards: selected})}.`);
-            if (p.hand.length === 0) return winRound(0);
+            log(`${mpMeuPlayer().name} comprou do lixo e baixou ${descMeld({type: valid.type || 'sequence', suit: valid.suit, cards: selected})}.`);
+            if (p.hand.length === 0) return winRound(gameState.multiplayer ? gameState.mpMeuIdx : 0);
+            // Renderizar localmente PRIMEIRO, depois sincronizar
             updateUI(); updateButtons();
+            try { mpPublicar(); } catch(e) { console.error('[createMeld joker]', e); }
         });
         return;
     }
@@ -1227,22 +2025,25 @@ function createMeld() {
         gameState.discardPendingCard = null;
         gameState.hasDrawn = true;
         gameState.phase = 'meld';
-        gameState.tableMelds.push({...valid, owner: 0});
+        gameState.tableMelds.push({...valid, owner: gameState.multiplayer ? gameState.mpMeuIdx : 0});
         p.hasMeldedThisTurn = true;
         gameState.selectedCards = [];
-        log(`Você comprou o ${descCard(pendingCard)} do lixo e baixou ${descMeld({type: valid.type, suit: valid.suit, cards: selected})}.`);
+        log(`${mpMeuPlayer().name} comprou do lixo e baixou ${descMeld({type: valid.type, suit: valid.suit, cards: selected})}.`);
     } else {
-        gameState.tableMelds.push({...valid, owner: 0});
+        gameState.tableMelds.push({...valid, owner: gameState.multiplayer ? gameState.mpMeuIdx : 0});
         p.hasMeldedThisTurn = true;
         gameState.selectedCards = [];
-        log(`Você baixou ${descMeld({type: valid.type, suit: valid.suit, cards: selected})}.`);
+        log(`${mpMeuPlayer().name} baixou ${descMeld({type: valid.type, suit: valid.suit, cards: selected})}.`);
     }
-    if (p.hand.length === 0) return winRound(0);
+    if (p.hand.length === 0) return winRound(gameState.multiplayer ? gameState.mpMeuIdx : 0);
+    // Renderizar localmente PRIMEIRO, depois sincronizar com a rede
     updateUI(); updateButtons();
+    try { mpPublicar(); } catch(e) { console.error('[createMeld]', e); }
 }
 function addToMeld() {
     if (gameState.gameOver || gameState.canTakeDiscard || gameState.selectedMeld === null || gameState.selectedCards.length < 1) return;
-    const p = gameState.players[0]; 
+    if (!mpEhMinhaTez()) return;
+    const p = mpMeuPlayer(); 
     const meld = gameState.tableMelds[gameState.selectedMeld];
     const cardsToAdd = p.hand.filter(c => gameState.selectedCards.includes(c.id));
 
@@ -1273,7 +2074,12 @@ function addToMeld() {
                     if (!c.isJoker) existingValues.add(c.value);
                     else if (c.jokerValue) existingValues.add(RANK_VALUES[c.jokerValue] || 1);
                 });
-                const real = meld.cards.filter(c => !c.isJoker).sort((a,b)=>a.value-b.value);
+                // Incluir coringas com valor definido como cartas reais para cálculo de gaps
+                const real = [
+                    ...meld.cards.filter(c => !c.isJoker),
+                    ...meld.cards.filter(c => c.isJoker && c.jokerValue && c.jokerSuit)
+                        .map(c => ({ value: c.jokerValue === 'A' ? 1 : (RANK_VALUES[c.jokerValue] || 0), suit: c.jokerSuit, isJoker: false }))
+                ].sort((a,b) => a.value - b.value);
                 let assigned = false;
 
                 for (let i = 1; i < real.length; i++) {
@@ -1327,19 +2133,22 @@ function addToMeld() {
         p.hand = p.hand.filter(c => c.id !== card.id); 
         meld.cards.push(card);
     }
+    reordenarSequencia(meld);
 
     gameState.selectedCards = []; 
     const nomes = cardsToAdd.map(c => descCard(c)).join(', ');
-    log(`Você adicionou ${nomes} ao ${descMeld(meld)}.`);
-    if (p.hand.length === 0) return winRound(0);
+    log(`${mpMeuPlayer().name} adicionou ${nomes} ao ${descMeld(meld)}.`);
+    if (p.hand.length === 0) return winRound(gameState.multiplayer ? gameState.mpMeuIdx : 0);
     updateUI(); updateButtons();
+    try { mpPublicar(); } catch(e) { console.error("[addToMeld]", e); }
 }
 function moveFromTable() {
+    if (!mpEhMinhaTez()) return;
     if (!gameState.hasDrawn) { 
         return showMessage('Aviso', 'Primeiro compre uma carta do monte ou do lixo.'); 
     }
     if (gameState.gameOver || gameState.canTakeDiscard || gameState.selectedTableCards.length === 0) return;
-    const p = gameState.players[0];
+    const p = mpMeuPlayer();
     const moveMap = new Map();
     gameState.selectedTableCards.forEach(key => { 
         const [mIdx, cIdx] = key.split('-').map(Number); 
@@ -1429,7 +2238,7 @@ function moveFromTable() {
         newMeldCards.push(card);
     }
 
-    gameState.tableMelds.push({type: validNew.type, cards: newMeldCards, suit: validNew.suit, owner: 0}); 
+    gameState.tableMelds.push({type: validNew.type, cards: newMeldCards, suit: validNew.suit, owner: mpMeuPlayer().id});
     p.hasMeldedThisTurn = true;
 
     extractedCards.forEach(e => {
@@ -1440,37 +2249,66 @@ function moveFromTable() {
 
     gameState.selectedCards = []; 
     gameState.selectedTableCards = [];
-    log(`Você reorganizou a mesa, formando ${descMeld({type: validNew.type, suit: validNew.suit, cards: newMeldCards})}.`);
-    if (p.hand.length === 0) return winRound(0);
+    log(`${mpMeuPlayer().name} reorganizou a mesa, formando ${descMeld({type: validNew.type, suit: validNew.suit, cards: newMeldCards})}.`);
+    if (p.hand.length === 0) return winRound(gameState.multiplayer ? gameState.mpMeuIdx : 0);
     updateUI(); updateButtons();
+    try { mpPublicar(); } catch(e) { console.error('[moveFromTable]', e); }
 }
 
 function discardCard() {
-    if (gameState.gameOver || gameState.selectedCards.length !== 1) return;
+    if (!mpEhMinhaTez()) return;
+    if (gameState.gameOver) return;
+    if (!gameState.hasDrawn && !gameState.canTakeDiscard) return;
+    if (gameState.selectedCards.length !== 1) return;
 
     if (gameState.canTakeDiscard) {
         cancelTakeDiscard();
-        return showMessage('Aviso', 'Você comprou do lixo e deve baixar um jogo. Selecione cartas para formar um jogo válido.');
+        try { mpPublicar(); } catch(e) { console.error('[discardCard cancelTake]', e); }
+        return showMessage('Aviso', 'Você comprou do lixo e deve baixar um jogo.');
     }
 
-    const p = gameState.players[0]; 
-    const card = p.hand.find(c => c.id === gameState.selectedCards[0]);
-    p.hand = p.hand.filter(c => c.id !== card.id);
-    gameState.discardPile.push(card); 
-    gameState.selectedCards = [];
-    log(`Você descartou o ${descCard(card)}.`);
-    turnSnapshot = null;
-    if (p.hand.length === 0) return winRound(0);
-    nextTurn();
+    try {
+        const p = mpMeuPlayer();
+        if (!p || !p.hand) return;
+
+        const cardId = gameState.selectedCards[0];
+        const card = p.hand.find(c => c.id === cardId);
+        if (!card) { gameState.selectedCards = []; updateUI(); updateButtons(); return; }
+
+        // 1. Modificar estado LOCAL imediatamente
+        p.hand = p.hand.filter(c => c.id !== cardId);
+        gameState.discardPile.push(card);
+        gameState.selectedCards = [];
+        turnSnapshot = null;
+
+        log(`${p.name} descartou o ${descCard(card)}.`);
+
+        // 2. Renderizar localmente SEM esperar a rede
+        updateUI(); updateButtons();
+
+        // 3. Verificar vitória antes de passar turno
+        if (p.hand.length === 0) {
+            return winRound(gameState.multiplayer ? gameState.mpMeuIdx : 0);
+        }
+
+        // 4. Passar turno (publica para a rede após atualizar local)
+        nextTurn();
+
+    } catch(e) {
+        console.error('[discardCard]', e);
+        // Recuperação: forçar renderização mesmo com erro
+        try { updateUI(); updateButtons(); } catch(_) {}
+    }
 }
 
 function stealJoker() {
+    if (!mpEhMinhaTez()) return;
     if (!gameState.hasDrawn) { 
         return showMessage('Aviso', 'Primeiro compre uma carta do monte ou do lixo.'); 
     }
     if (gameState.gameOver || gameState.canTakeDiscard || gameState.selectedMeld === null || gameState.selectedCards.length !== 1) return;
 
-    const p = gameState.players[0]; 
+    const p = mpMeuPlayer(); 
     const card = p.hand.find(c => c.id === gameState.selectedCards[0]); 
     const meld = gameState.tableMelds[gameState.selectedMeld];
 
@@ -1508,22 +2346,55 @@ function stealJoker() {
     p.hand = p.hand.filter(c => c.id !== card.id);
     p.hand.push(jokerParaMao);
     gameState.selectedCards = []; gameState.selectedMeld = null; 
-    log(`Você roubou o ${descJokerInMeld(jokerOriginal, meld)} do ${descMeld(meld)}.`);
+    log(`${mpMeuPlayer().name} roubou o ${descJokerInMeld(jokerOriginal, meld)} do ${descMeld(meld)}.`);
     updateUI(); updateButtons();
+    try { mpPublicar(); } catch(e) { console.error('[stealJoker]', e); }
 }
 
 function nextTurn() {
     if (gameState.roundEnded) return;
-    turnSnapshot = null;
-    const currentP = gameState.players[gameState.currentPlayer];
-    currentP.hasMeldedThisTurn = false;
-    gameState.currentPlayer = (gameState.currentPlayer + 1) % gameState.players.length; 
-    gameState.phase = 'draw'; gameState.hasDrawn = false; gameState.canTakeDiscard = false; gameState.discardSelected = false;
-    gameState.selectedCards = []; gameState.selectedTableCards = [];
-    gameState.discardPendingCard = null;
-    gameState.cardsExtractedThisTurn = [];
-    updateUI(); updateButtons();
-    if (gameState.players[gameState.currentPlayer].isBot) setTimeout(botTurn, 1000);
+
+    try {
+        timerStop();
+        turnSnapshot = null;
+
+        // 1. Modificar estado local imediatamente — nunca bloquear aqui
+        const currentP = gameState.players[gameState.currentPlayer];
+        if (currentP) currentP.hasMeldedThisTurn = false;
+
+        gameState.currentPlayer = (gameState.currentPlayer + 1) % gameState.players.length;
+        gameState.phase = 'draw';
+        gameState.hasDrawn = false;
+        gameState.canTakeDiscard = false;
+        gameState.discardSelected = false;
+        gameState.selectedCards = [];
+        gameState.selectedTableCards = [];
+        gameState.selectedMeld = null;
+        gameState.discardPendingCard = null;
+        gameState.cardsExtractedThisTurn = [];
+
+        // 2. Renderizar localmente ANTES de publicar na rede
+        try { updateUI(); updateButtons(); } catch(e) {
+            console.error('[nextTurn] updateUI erro:', e);
+        }
+
+        // 3. Publicar para a rede de forma não-bloqueante
+        // Se falhar, o estado local já está correto — a rede pode sincronizar depois
+        try { mpPublicar(); } catch(e) {
+            console.error('[nextTurn] mpPublicar erro:', e);
+        }
+
+        // 4. Iniciar bots ou timer — sempre após atualizar a UI
+        if (!gameState.multiplayer && gameState.players[gameState.currentPlayer] && gameState.players[gameState.currentPlayer].isBot) {
+            setTimeout(botTurn, 1000);
+        }
+        setTimeout(() => { try { timerIniciarCompra(); } catch(e) {} }, 100);
+
+    } catch(e) {
+        console.error('[nextTurn] erro crítico:', e);
+        // Última linha de defesa: forçar UI mesmo assim
+        try { updateUI(); updateButtons(); } catch(_) {}
+    }
 }
 
 // ========================
@@ -1574,7 +2445,9 @@ function botTurn() {
                             gameState.discardPile.pop();
                             const ids = new Set(handPick.map(c => c.id));
                             p.hand = p.hand.filter(c => !ids.has(c.id));
-                            gameState.tableMelds.push({ type: 'sequence', suit: topDiscard.suit, cards: combo, owner: p.id });
+                            const novoMeld = { type: 'sequence', suit: topDiscard.suit, cards: combo, owner: p.id };
+                            reordenarSequencia(novoMeld);
+                            gameState.tableMelds.push(novoMeld);
                             p.hasMeldedThisTurn = true;
                             gameState.hasDrawn = true;
                             log(`${p.name} comprou o ${descCard(topDiscard)} do lixo e baixou ${descMeld({ type: 'sequence', suit: topDiscard.suit, cards: combo })}.`);
@@ -1615,6 +2488,7 @@ function botTurn() {
 function botBaixarJogosDaMao(p) {
     let baixou = false;
     const MAX = 20;
+    const jokersDaMao = () => p.hand.filter(c => c.isJoker && !c.jokerValue);
 
     // --- Grupos ---
     for (let iter = 0; iter < MAX; iter++) {
@@ -1622,17 +2496,26 @@ function botBaixarJogosDaMao(p) {
         p.hand.forEach(c => { if (!c.isJoker) counts[c.rank] = (counts[c.rank] || 0) + 1; });
         let baixouGrupo = false;
         for (let r in counts) {
-            if (counts[r] >= 3) {
-                let game = p.hand.filter(c => !c.isJoker && c.rank === r);
-                let valid = isValidMeld(game);
+            const reais = p.hand.filter(c => !c.isJoker && c.rank === r);
+            const jokers = jokersDaMao();
+            // Tentar com cartas reais (>=3) ou com coringa (>=2 reais + joker)
+            let game = null;
+            if (reais.length >= 3) {
+                game = reais;
+            } else if (reais.length >= 2 && jokers.length >= 1) {
+                game = [...reais, jokers[0]];
+            }
+            if (game) {
+                let valid = isValidMeld(game.map(c => deepCopyCard(c)));
                 if (valid) {
-                    if (valid.jokerChoices && valid.jokerChoices.length > 0) {
-                        botChooseJokerValues(valid.jokerChoices, p);
-                        applyJokerChoices(game, valid.jokerChoices);
-                    }
-                    const ids = new Set(game.map(c => c.id));
+                    // Aplicar jokerValues validados às cartas reais
+                    if (valid.validatedCards) {
+                        valid.validatedCards.forEach(vc => {
+                            const orig = game.find(c => c.id === vc.id);
+                            if (orig && orig.isJoker) { orig.jokerValue = vc.jokerValue; orig.jokerSuit = vc.jokerSuit; }
+                        });
+                    }                    const ids = new Set(game.map(c => c.id));
                     p.hand = p.hand.filter(c => !ids.has(c.id));
-                    // Usar cartas originais da mão, não as cópias de isValidMeld
                     gameState.tableMelds.push({ type: valid.type, suit: valid.suit || null, cards: game, owner: p.id });
                     p.hasMeldedThisTurn = true;
                     const g = gameState.tableMelds[gameState.tableMelds.length - 1];
@@ -1659,7 +2542,9 @@ function botBaixarJogosDaMao(p) {
             for (let c of suitCards) {
                 if (!seen.has(c.value)) { seen.add(c.value); unique.push(c); }
             }
+            const jokersLivres = jokersDaMao();
 
+            // Tentar sequências contíguas (sem coringa)
             let bestSeq = null;
             let i = 0;
             while (i < unique.length) {
@@ -1670,20 +2555,42 @@ function botBaixarJogosDaMao(p) {
                 i = j + 1;
             }
 
+            // Tentar sequências com lacunas preenchidas por coringas
+            if (!bestSeq && jokersLivres.length > 0) {
+                for (let start = 0; start < unique.length; start++) {
+                    for (let end = start + 1; end < unique.length; end++) {
+                        const run = unique.slice(start, end + 1);
+                        const gaps = run[run.length-1].value - run[0].value + 1 - run.length;
+                        if (gaps > 0 && gaps <= jokersLivres.length) {
+                            const candidate = [...run, ...jokersLivres.slice(0, gaps)];
+                            if (candidate.length >= 3) {
+                                const valid = isValidMeld(candidate.map(c => deepCopyCard(c)));
+                                if (valid && (!bestSeq || candidate.length > bestSeq.length)) {
+                                    bestSeq = candidate;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (bestSeq) {
-                let valid = isValidMeld(bestSeq);
+                const valid = isValidMeld(bestSeq.map(c => deepCopyCard(c)));
                 if (valid) {
-                    if (valid.jokerChoices && valid.jokerChoices.length > 0) {
-                        botChooseJokerValues(valid.jokerChoices, p);
-                        applyJokerChoices(bestSeq, valid.jokerChoices);
+                    // Aplicar jokerValues validados às cartas reais
+                    if (valid.validatedCards) {
+                        valid.validatedCards.forEach(vc => {
+                            const orig = bestSeq.find(c => c.id === vc.id);
+                            if (orig && orig.isJoker) { orig.jokerValue = vc.jokerValue; orig.jokerSuit = vc.jokerSuit; }
+                        });
                     }
                     const ids = new Set(bestSeq.map(c => c.id));
                     p.hand = p.hand.filter(c => !ids.has(c.id));
-                    // Usar cartas originais, não as cópias de isValidMeld
-                    gameState.tableMelds.push({ type: valid.type, suit: valid.suit || null, cards: bestSeq, owner: p.id });
+                    const novoMeld = { type: valid.type, suit: valid.suit || null, cards: bestSeq, owner: p.id };
+                    reordenarSequencia(novoMeld);
+                    gameState.tableMelds.push(novoMeld);
                     p.hasMeldedThisTurn = true;
-                    const s = gameState.tableMelds[gameState.tableMelds.length - 1];
-                    log(`${p.name} baixou ${descMeld(s)}.`);
+                    log(`${p.name} baixou ${descMeld(novoMeld)}.`);
                     baixou = true;
                     baixouSeq = true;
                     if (p.hand.length === 0) return baixou;
@@ -1713,7 +2620,7 @@ function beginnerBotLogic(p) {
         iterations++;
 
         for (let meld of gameState.tableMelds) {
-            if (!meld.cards || meld.cards.length <= 3) continue;
+            if (!meld.cards || meld.cards.length < 4) continue; // mínimo 4 para roubar (sobra 3)
             let jokerIdx = meld.cards.findIndex(c => c.isJoker);
             if (jokerIdx !== -1) {
                 let joker = meld.cards[jokerIdx];
@@ -1748,12 +2655,12 @@ function beginnerBotLogic(p) {
                     if (card.isJoker) {
                         if (meld.type === 'same') { card.jokerValue = meld.cards.find(x => !x.isJoker).rank; card.jokerSuit = null; }
                         else {
-                            const real = meld.cards.filter(x => !x.isJoker).sort((a,b) => a.value - b.value);
-                            const existingValues = new Set();
-                            meld.cards.forEach(x => {
-                                if (!x.isJoker) existingValues.add(x.value);
-                                else if (x.jokerValue) existingValues.add(RANK_VALUES[x.jokerValue] || 1);
-                            });
+                            const real = [
+                                ...meld.cards.filter(x => !x.isJoker),
+                                ...meld.cards.filter(x => x.isJoker && x.jokerValue && x.jokerSuit)
+                                    .map(x => ({ value: x.jokerValue === 'A' ? 1 : (RANK_VALUES[x.jokerValue] || 0), suit: x.jokerSuit, isJoker: false }))
+                            ].sort((a,b) => a.value - b.value);
+                            const existingValues = new Set(real.map(x => x.value));
                             let assigned = false;
                             for (let j = 1; j < real.length; j++) {
                                 const gap = real[j].value - real[j-1].value - 1;
@@ -1780,11 +2687,24 @@ function beginnerBotLogic(p) {
                         }
                     }
                     meld.cards.push(card);
-                    if (!isValidMeld(meld.cards)) {
+                    const validResult = isValidMeld(meld.cards.map(c => deepCopyCard(c)));
+                    if (!validResult) {
                         meld.cards.pop();
                         if (card.isJoker) { card.jokerValue = null; card.jokerSuit = null; }
                         continue;
                     }
+                    // Copiar jokerValues validados de volta para as cartas reais
+                    if (validResult.validatedCards) {
+                        // Mapear por ID para garantir correspondência correta
+                        validResult.validatedCards.forEach(vc => {
+                            const real = meld.cards.find(c => c.id === vc.id);
+                            if (real && real.isJoker) {
+                                real.jokerValue = vc.jokerValue;
+                                real.jokerSuit = vc.jokerSuit;
+                            }
+                        });
+                    }
+                    reordenarSequencia(meld);
                     log(`${p.name} adicionou o ${descCard(card)} ao ${descMeld(meld)}.`);
                     added = true;
                     if (p.hand.length === 0) return;
@@ -1805,8 +2725,12 @@ function beginnerBotLogic(p) {
             if (pts > maxPoints && !p.hand[i].isJoker) { maxPoints = pts; discardIdx = i; }
         }
     }
-    if (discardIdx === -1) discardIdx = p.hand.findIndex(c => !c.isJoker);
-    const discard = discardIdx !== -1 ? p.hand.splice(discardIdx, 1)[0] : p.hand.pop();
+    // Só descarta coringa se for a única opção
+    if (discardIdx === -1) {
+        const naoCoringa = p.hand.findIndex(c => !c.isJoker);
+        discardIdx = naoCoringa !== -1 ? naoCoringa : 0; // coringa só como último recurso
+    }
+    const discard = p.hand.splice(discardIdx, 1)[0];
     gameState.discardPile.push(discard);
     log(`${p.name} descartou o ${descCard(discard)}.`);
 }
@@ -1834,19 +2758,21 @@ function expertBotLogic(p) {
             if (meld.cards && meld.cards.length > 3) {
                 for (let cIdx = 0; cIdx < meld.cards.length; cIdx++) {
                     let extractedCard = meld.cards[cIdx];
-                    if (extractedCard.isJoker && extractedCard.jokerValue) continue;
-                    let testCards = meld.cards.filter((_, idx) => idx !== cIdx);
-                    if (isValidMeld(testCards)) {
-                        for (let comboSize = 1; comboSize <= Math.min(3, p.hand.length); comboSize++) {
-                            for (let indices of getCombinations(p.hand.length, comboSize)) {
-                                let handCards = indices.map(i => p.hand[i]);
-                                let combined = [...handCards, extractedCard];
-                                if (hasDuplicateInSequence(combined)) continue;
-                                let validNew = isValidMeld(combined);
-                                if (validNew) {
-                                    let score = (p.hand.length - (p.hand.length - comboSize)) * 100 - (p.hand.length - comboSize);
-                                    if (score > bestScore) { bestScore = score; bestMove = { type: 'disassemble', mIdx, cIdx, handIndices: indices, validNew }; }
-                                }
+                    // Usar cópias para não afetar cartas reais durante a análise
+                    let testCards = meld.cards.filter((_, idx) => idx !== cIdx).map(c => deepCopyCard(c));
+                    if (!isValidMeld(testCards)) continue;
+                    // Criar cópia da carta extraída — se coringa, limpar valor para reatribuição
+                    let extractedCopy = deepCopyCard(extractedCard);
+                    if (extractedCopy.isJoker) { extractedCopy.jokerValue = null; extractedCopy.jokerSuit = null; }
+                    for (let comboSize = 1; comboSize <= Math.min(3, p.hand.length); comboSize++) {
+                        for (let indices of getCombinations(p.hand.length, comboSize)) {
+                            let handCards = indices.map(i => deepCopyCard(p.hand[i]));
+                            let combined = [...handCards, extractedCopy];
+                            if (hasDuplicateInSequence(combined)) continue;
+                            let validNew = isValidMeld(combined);
+                            if (validNew) {
+                                let score = comboSize * 100 - (p.hand.length - comboSize);
+                                if (score > bestScore) { bestScore = score; bestMove = { type: 'disassemble', mIdx, cIdx, handIndices: indices, validNew }; }
                             }
                         }
                     }
@@ -1859,8 +2785,8 @@ function expertBotLogic(p) {
             if (meld.owner === p.id) continue;
             for (let comboSize = 1; comboSize <= Math.min(3, p.hand.length); comboSize++) {
                 for (let indices of getCombinations(p.hand.length, comboSize)) {
-                    let handCards = indices.map(i => p.hand[i]);
-                    let combined = [...meld.cards, ...handCards];
+                    let handCards = indices.map(i => deepCopyCard(p.hand[i]));
+                    let combined = [...meld.cards.map(c => deepCopyCard(c)), ...handCards];
                     if (hasDuplicateInSequence(combined)) continue;
                     let valid = isValidMeld(combined);
                     if (valid) {
@@ -1875,18 +2801,37 @@ function expertBotLogic(p) {
             if (bestMove.type === 'disassemble') {
                 let meld = gameState.tableMelds[bestMove.mIdx];
                 let extracted = meld.cards.splice(bestMove.cIdx, 1)[0];
-                let validRemainder = isValidMeld(meld.cards);
+                // Se é coringa, limpar valor para reatribuição correta no novo jogo
+                if (extracted.isJoker) { extracted.jokerValue = null; extracted.jokerSuit = null; }
+                let validRemainder = isValidMeld(meld.cards.map(c => deepCopyCard(c)));
                 if (!validRemainder) { meld.cards.splice(bestMove.cIdx, 0, extracted); continue; }
+                // Aplicar jokerValues corrigidos ao meld restante
+                if (validRemainder.validatedCards) {
+                    validRemainder.validatedCards.forEach(vc => {
+                        const orig = meld.cards.find(c => c.id === vc.id);
+                        if (orig && orig.isJoker) { orig.jokerValue = vc.jokerValue; orig.jokerSuit = vc.jokerSuit; }
+                    });
+                }
                 meld.type = validRemainder.type;
                 if (validRemainder.suit) meld.suit = validRemainder.suit;
+                reordenarSequencia(meld);
                 let handCardsToRemove = [];
                 for (let i = bestMove.handIndices.length - 1; i >= 0; i--) handCardsToRemove.push(p.hand.splice(bestMove.handIndices[i], 1)[0]);
                 let combined = [...handCardsToRemove, extracted];
-                let validNew = isValidMeld(combined);
+                let validNew = isValidMeld(combined.map(c => deepCopyCard(c)));
                 if (!validNew) { actionTaken = false; continue; }
-                gameState.tableMelds.push({ type: validNew.type, suit: validNew.suit || null, cards: combined, owner: p.id });
+                // Aplicar jokerValues ao novo jogo
+                if (validNew.validatedCards) {
+                    validNew.validatedCards.forEach(vc => {
+                        const orig = combined.find(c => c.id === vc.id);
+                        if (orig && orig.isJoker) { orig.jokerValue = vc.jokerValue; orig.jokerSuit = vc.jokerSuit; }
+                    });
+                }
+                const novoMeld = { type: validNew.type, suit: validNew.suit || null, cards: combined, owner: p.id };
+                reordenarSequencia(novoMeld);
+                gameState.tableMelds.push(novoMeld);
                 p.hasMeldedThisTurn = true;
-                log(`${p.name} reorganizou a mesa, formando ${descMeld({ type: validNew.type, suit: validNew.suit, cards: combined })}.`);
+                log(`${p.name} reorganizou a mesa, formando ${descMeld(novoMeld)}.`);
                 actionTaken = true; if (p.hand.length === 0) return; continue;
             } else if (bestMove.type === 'incorporate') {
                 let meld = gameState.tableMelds[bestMove.mIdx];
@@ -1896,13 +2841,14 @@ function expertBotLogic(p) {
                 meld.cards = combined; meld.type = bestMove.validNew.type;
                 if (bestMove.validNew.suit) meld.suit = bestMove.validNew.suit;
                 meld.owner = p.id; p.hasMeldedThisTurn = true;
+                reordenarSequencia(meld);
                 log(`${p.name} adicionou ${handCardsToRemove.map(c => descCard(c)).join(', ')} ao ${descMeld(meld)}.`);
                 actionTaken = true; if (p.hand.length === 0) return; continue;
             }
         }
 
         for (let meld of gameState.tableMelds) {
-            if (!meld.cards || meld.cards.length <= 3) continue;
+            if (!meld.cards || meld.cards.length < 4) continue; // mínimo 4 para roubar (sobra 3)
             let jokerIdx = meld.cards.findIndex(c => c.isJoker);
             if (jokerIdx !== -1) {
                 let joker = meld.cards[jokerIdx];
@@ -1936,12 +2882,12 @@ function expertBotLogic(p) {
                     if (card.isJoker) {
                         if (meld.type === 'same') { card.jokerValue = meld.cards.find(x => !x.isJoker).rank; card.jokerSuit = null; }
                         else {
-                            const real = meld.cards.filter(x => !x.isJoker).sort((a,b) => a.value - b.value);
-                            const existingValues = new Set();
-                            meld.cards.forEach(x => {
-                                if (!x.isJoker) existingValues.add(x.value);
-                                else if (x.jokerValue) existingValues.add(x.jokerValue === 'A' ? 1 : RANK_VALUES[x.jokerValue]);
-                            });
+                            const real = [
+                                ...meld.cards.filter(x => !x.isJoker),
+                                ...meld.cards.filter(x => x.isJoker && x.jokerValue && x.jokerSuit)
+                                    .map(x => ({ value: x.jokerValue === 'A' ? 1 : (RANK_VALUES[x.jokerValue] || 0), suit: x.jokerSuit, isJoker: false }))
+                            ].sort((a,b) => a.value - b.value);
+                            const existingValues = new Set(real.map(x => x.value));
                             let assigned = false;
                             for (let j = 1; j < real.length; j++) {
                                 const gap = real[j].value - real[j-1].value - 1;
@@ -1966,11 +2912,24 @@ function expertBotLogic(p) {
                         }
                     }
                     meld.cards.push(card);
-                    if (!isValidMeld(meld.cards)) {
+                    const validResult = isValidMeld(meld.cards.map(c => deepCopyCard(c)));
+                    if (!validResult) {
                         meld.cards.pop();
                         if (card.isJoker) { card.jokerValue = null; card.jokerSuit = null; }
                         continue;
                     }
+                    // Copiar jokerValues validados de volta para as cartas reais
+                    if (validResult.validatedCards) {
+                        // Mapear por ID para garantir correspondência correta
+                        validResult.validatedCards.forEach(vc => {
+                            const real = meld.cards.find(c => c.id === vc.id);
+                            if (real && real.isJoker) {
+                                real.jokerValue = vc.jokerValue;
+                                real.jokerSuit = vc.jokerSuit;
+                            }
+                        });
+                    }
+                    reordenarSequencia(meld);
                     log(`${p.name} adicionou o ${descCard(card)} ao ${descMeld(meld)}.`);
                     added = true;
                     if (p.hand.length === 0) return;
@@ -1993,8 +2952,12 @@ function expertBotLogic(p) {
             if (discardIdx !== -1) break;
         }
     }
-    if (discardIdx === -1) discardIdx = p.hand.findIndex(c => !c.isJoker);
-    const discard = discardIdx !== -1 ? p.hand.splice(discardIdx, 1)[0] : p.hand.pop();
+    // Só descarta coringa se for a única opção
+    if (discardIdx === -1) {
+        const naoCoringa = p.hand.findIndex(c => !c.isJoker);
+        discardIdx = naoCoringa !== -1 ? naoCoringa : 0; // coringa só como último recurso
+    }
+    const discard = p.hand.splice(discardIdx, 1)[0];
     gameState.discardPile.push(discard);
     log(`${p.name} descartou o ${descCard(discard)}.`);
 }
@@ -2027,19 +2990,19 @@ function masterBotLogic(p) {
             if (meld.cards && meld.cards.length > 3) {
                 for (let cIdx = 0; cIdx < meld.cards.length; cIdx++) {
                     let extractedCard = meld.cards[cIdx];
-                    if (extractedCard.isJoker && extractedCard.jokerValue) continue;
-                    let testCards = meld.cards.filter((_, idx) => idx !== cIdx);
-                    if (isValidMeld(testCards)) {
-                        for (let comboSize = 1; comboSize <= Math.min(3, p.hand.length); comboSize++) {
-                            for (let indices of getCombinations(p.hand.length, comboSize)) {
-                                let handCards = indices.map(i => p.hand[i]);
-                                let combined = [...handCards, extractedCard];
-                                if (hasDuplicateInSequence(combined)) continue;
-                                let validNew = isValidMeld(combined);
-                                if (validNew) {
-                                    let score = comboSize * 100 - (p.hand.length - comboSize);
-                                    if (score > bestScore) { bestScore = score; bestMove = { type: 'disassemble', mIdx, cIdx, handIndices: indices, validNew }; }
-                                }
+                    let testCards = meld.cards.filter((_, idx) => idx !== cIdx).map(c => deepCopyCard(c));
+                    if (!isValidMeld(testCards)) continue;
+                    let extractedCopy = deepCopyCard(extractedCard);
+                    if (extractedCopy.isJoker) { extractedCopy.jokerValue = null; extractedCopy.jokerSuit = null; }
+                    for (let comboSize = 1; comboSize <= Math.min(3, p.hand.length); comboSize++) {
+                        for (let indices of getCombinations(p.hand.length, comboSize)) {
+                            let handCards = indices.map(i => deepCopyCard(p.hand[i]));
+                            let combined = [...handCards, extractedCopy];
+                            if (hasDuplicateInSequence(combined)) continue;
+                            let validNew = isValidMeld(combined);
+                            if (validNew) {
+                                let score = comboSize * 100 - (p.hand.length - comboSize);
+                                if (score > bestScore) { bestScore = score; bestMove = { type: 'disassemble', mIdx, cIdx, handIndices: indices, validNew }; }
                             }
                         }
                     }
@@ -2052,8 +3015,8 @@ function masterBotLogic(p) {
             if (meld.owner === p.id) continue;
             for (let comboSize = 1; comboSize <= Math.min(3, p.hand.length); comboSize++) {
                 for (let indices of getCombinations(p.hand.length, comboSize)) {
-                    let handCards = indices.map(i => p.hand[i]);
-                    let combined = [...meld.cards, ...handCards];
+                    let handCards = indices.map(i => deepCopyCard(p.hand[i]));
+                    let combined = [...meld.cards.map(c => deepCopyCard(c)), ...handCards];
                     if (hasDuplicateInSequence(combined)) continue;
                     let valid = isValidMeld(combined);
                     if (valid) {
@@ -2068,18 +3031,37 @@ function masterBotLogic(p) {
             if (bestMove.type === 'disassemble') {
                 let meld = gameState.tableMelds[bestMove.mIdx];
                 let extracted = meld.cards.splice(bestMove.cIdx, 1)[0];
-                let validRemainder = isValidMeld(meld.cards);
+                // Se é coringa, limpar valor para reatribuição correta no novo jogo
+                if (extracted.isJoker) { extracted.jokerValue = null; extracted.jokerSuit = null; }
+                let validRemainder = isValidMeld(meld.cards.map(c => deepCopyCard(c)));
                 if (!validRemainder) { meld.cards.splice(bestMove.cIdx, 0, extracted); continue; }
+                // Aplicar jokerValues corrigidos ao meld restante
+                if (validRemainder.validatedCards) {
+                    validRemainder.validatedCards.forEach(vc => {
+                        const orig = meld.cards.find(c => c.id === vc.id);
+                        if (orig && orig.isJoker) { orig.jokerValue = vc.jokerValue; orig.jokerSuit = vc.jokerSuit; }
+                    });
+                }
                 meld.type = validRemainder.type;
                 if (validRemainder.suit) meld.suit = validRemainder.suit;
+                reordenarSequencia(meld);
                 let handCardsToRemove = [];
                 for (let i = bestMove.handIndices.length - 1; i >= 0; i--) handCardsToRemove.push(p.hand.splice(bestMove.handIndices[i], 1)[0]);
                 let combined = [...handCardsToRemove, extracted];
-                let validNew = isValidMeld(combined);
+                let validNew = isValidMeld(combined.map(c => deepCopyCard(c)));
                 if (!validNew) { actionTaken = false; continue; }
-                gameState.tableMelds.push({ type: validNew.type, suit: validNew.suit || null, cards: combined, owner: p.id });
+                // Aplicar jokerValues ao novo jogo
+                if (validNew.validatedCards) {
+                    validNew.validatedCards.forEach(vc => {
+                        const orig = combined.find(c => c.id === vc.id);
+                        if (orig && orig.isJoker) { orig.jokerValue = vc.jokerValue; orig.jokerSuit = vc.jokerSuit; }
+                    });
+                }
+                const novoMeld = { type: validNew.type, suit: validNew.suit || null, cards: combined, owner: p.id };
+                reordenarSequencia(novoMeld);
+                gameState.tableMelds.push(novoMeld);
                 p.hasMeldedThisTurn = true;
-                log(`${p.name} reorganizou a mesa, formando ${descMeld({ type: validNew.type, suit: validNew.suit, cards: combined })}.`);
+                log(`${p.name} reorganizou a mesa, formando ${descMeld(novoMeld)}.`);
                 actionTaken = true; if (p.hand.length === 0) return; continue;
             } else if (bestMove.type === 'incorporate') {
                 let meld = gameState.tableMelds[bestMove.mIdx];
@@ -2089,13 +3071,14 @@ function masterBotLogic(p) {
                 meld.cards = combined; meld.type = bestMove.validNew.type;
                 if (bestMove.validNew.suit) meld.suit = bestMove.validNew.suit;
                 meld.owner = p.id; p.hasMeldedThisTurn = true;
+                reordenarSequencia(meld);
                 log(`${p.name} adicionou ${handCardsToRemove.map(c => descCard(c)).join(', ')} ao ${descMeld(meld)}.`);
                 actionTaken = true; if (p.hand.length === 0) return; continue;
             }
         }
 
         for (let meld of gameState.tableMelds) {
-            if (!meld.cards || meld.cards.length <= 3) continue;
+            if (!meld.cards || meld.cards.length < 4) continue; // mínimo 4 para roubar (sobra 3)
             let jokerIdx = meld.cards.findIndex(c => c.isJoker);
             if (jokerIdx !== -1) {
                 let joker = meld.cards[jokerIdx];
@@ -2129,12 +3112,12 @@ function masterBotLogic(p) {
                     if (card.isJoker) {
                         if (meld.type === 'same') { card.jokerValue = meld.cards.find(x => !x.isJoker).rank; card.jokerSuit = null; }
                         else {
-                            const real = meld.cards.filter(x => !x.isJoker).sort((a,b) => a.value - b.value);
-                            const existingValues = new Set();
-                            meld.cards.forEach(x => {
-                                if (!x.isJoker) existingValues.add(x.value);
-                                else if (x.jokerValue) existingValues.add(x.jokerValue === 'A' ? 1 : RANK_VALUES[x.jokerValue]);
-                            });
+                            const real = [
+                                ...meld.cards.filter(x => !x.isJoker),
+                                ...meld.cards.filter(x => x.isJoker && x.jokerValue && x.jokerSuit)
+                                    .map(x => ({ value: x.jokerValue === 'A' ? 1 : (RANK_VALUES[x.jokerValue] || 0), suit: x.jokerSuit, isJoker: false }))
+                            ].sort((a,b) => a.value - b.value);
+                            const existingValues = new Set(real.map(x => x.value));
                             let assigned = false;
                             for (let j = 1; j < real.length; j++) {
                                 const gap = real[j].value - real[j-1].value - 1;
@@ -2159,11 +3142,24 @@ function masterBotLogic(p) {
                         }
                     }
                     meld.cards.push(card);
-                    if (!isValidMeld(meld.cards)) {
+                    const validResult = isValidMeld(meld.cards.map(c => deepCopyCard(c)));
+                    if (!validResult) {
                         meld.cards.pop();
                         if (card.isJoker) { card.jokerValue = null; card.jokerSuit = null; }
                         continue;
                     }
+                    // Copiar jokerValues validados de volta para as cartas reais
+                    if (validResult.validatedCards) {
+                        // Mapear por ID para garantir correspondência correta
+                        validResult.validatedCards.forEach(vc => {
+                            const real = meld.cards.find(c => c.id === vc.id);
+                            if (real && real.isJoker) {
+                                real.jokerValue = vc.jokerValue;
+                                real.jokerSuit = vc.jokerSuit;
+                            }
+                        });
+                    }
+                    reordenarSequencia(meld);
                     log(`${p.name} adicionou o ${descCard(card)} ao ${descMeld(meld)}.`);
                     added = true;
                     if (p.hand.length === 0) return;
@@ -2218,8 +3214,12 @@ function masterBotLogic(p) {
             if (u < lowestUtility) { lowestUtility = u; discardIdx = i; }
         }
     }
-    if (discardIdx === -1) discardIdx = p.hand.findIndex(c => !c.isJoker);
-    const discard = discardIdx !== -1 ? p.hand.splice(discardIdx, 1)[0] : p.hand.pop();
+    // Só descarta coringa se for a única opção
+    if (discardIdx === -1) {
+        const naoCoringa = p.hand.findIndex(c => !c.isJoker);
+        discardIdx = naoCoringa !== -1 ? naoCoringa : 0; // coringa só como último recurso
+    }
+    const discard = p.hand.splice(discardIdx, 1)[0];
 
     // Registrar o descarte na memória
     if (!p.discardMemory[discard.rank]) p.discardMemory[discard.rank] = 0;
@@ -2274,22 +3274,43 @@ function hasDuplicateInSequence(cards) {
 function winRound(id) {
     if (gameState.roundEnded) return;
     gameState.roundEnded = true;
+    timerStop();
 
     gameState.wins[id]++;
     gameState.players.forEach(p => { 
         let pts = (p.id === id) ? 0 : p.hand.reduce((s, c) => s + (c.isJoker ? 20 : POINTS[c.rank]), 0); 
         p.totalScore += pts; 
     });
-    gameState.firstPlayerOfRound = (gameState.firstPlayerOfRound + 1) % gameState.players.length; 
-    if (gameState.round >= 10) return endGame();
-    gameState.round++;
-    showMessage('Fim da Rodada', `Vencedor: ${gameState.players[id].name}`, () => {
-        startRound();
-    });
+    gameState.firstPlayerOfRound = (gameState.firstPlayerOfRound + 1) % gameState.players.length;
+    gameState._mpWinner = id;
+
+    if (gameState.round >= 10) {
+        mpPublicar();
+        return endGame();
+    }
+    gameState.round++;   // incrementar ANTES de publicar
+    mpPublicar();        // publica com round já correto
+
+    const winnerName = gameState.players[id].name;
+    if (gameState.multiplayer) {
+        showMessage('Fim da Rodada', `Vencedor: ${winnerName}\n\nPróxima rodada em 3 segundos...`);
+        setTimeout(() => {
+            hideMessage();
+            // Apenas o HOST inicia a próxima rodada, independente de quem ganhou
+            // Se quem ganhou não é o host, o host detecta via mpAplicarEstado e chama startRound
+            if (mpEhHost) startRound();
+        }, 3500);
+    } else {
+        showMessage('Fim da Rodada', `Vencedor: ${winnerName}`, () => {
+            startRound();
+        });
+    }
 }
 
 function endGame() {
-    gameState.gameOver = true; 
+    gameState.gameOver = true;
+    // Publicar gameOver para que o oponente também veja o pódio
+    try { mpPublicar(); } catch(e) { console.error('[endGame]', e); }
     const sorted = [...gameState.players].sort((a,b)=>a.totalScore-b.totalScore);
     const podiumEl = document.getElementById('podiumList');
     podiumEl.innerHTML = sorted.map((p, idx) => {
@@ -2306,9 +3327,15 @@ function endGame() {
 // UI - ATUALIZAÇÃO
 // ========================
 function updateUI() {
-    const p = gameState.players[0]; 
-    document.getElementById('roundDisplay').textContent = `Rodada ${gameState.round}/10`; 
-    document.getElementById('meldCount').textContent = gameState.tableMelds.length;
+    try {
+        if (!gameState.players || !gameState.players.length) return;
+        const p = mpMeuPlayer();
+        if (!p) return;
+
+        const roundEl = document.getElementById('roundDisplay');
+        if (roundEl) roundEl.textContent = `Rodada ${gameState.round}/10`;
+        const meldCountEl = document.getElementById('meldCount');
+        if (meldCountEl) meldCountEl.textContent = gameState.tableMelds.length;
 
     const otherEl = document.getElementById('otherPlayers'); 
     otherEl.innerHTML = '';
@@ -2325,14 +3352,14 @@ function updateUI() {
         const div = document.createElement('div'); 
 
         let highlightClass = '';
-        const isMyTurn = gameState.currentPlayer === 0;
+        const isMyTurn = mpEhMinhaTez();
         const hasDrawn = gameState.hasDrawn;
         const hasMeldSelected = gameState.selectedMeld === idx;
 
         if (isMyTurn && hasDrawn && !gameState.canTakeDiscard) {
             // Highlight para roubo de coringa
             if (gameState.selectedCards.length === 1 && !hasMeldSelected) {
-                const selectedCard = gameState.players[0].hand.find(c => gameState.selectedCards.includes(c.id));
+                const selectedCard = mpMeuPlayer().hand.find(c => gameState.selectedCards.includes(c.id));
                 if (selectedCard && meld.cards.some(c => {
                     if (!c.isJoker) return false;
                     if (meld.type === 'sequence') return c.jokerValue === selectedCard.rank && c.jokerSuit === selectedCard.suit;
@@ -2344,7 +3371,7 @@ function updateUI() {
 
             // Highlight para adicionar carta - permite 1+ cartas
             if (gameState.selectedCards.length >= 1 && hasMeldSelected) {
-                const selectedCards = gameState.players[0].hand.filter(c => gameState.selectedCards.includes(c.id));
+                const selectedCards = mpMeuPlayer().hand.filter(c => gameState.selectedCards.includes(c.id));
                 const allCanAdd = selectedCards.length > 0 && selectedCards.every(c => canAddToMeld(meld, c));
                 if (allCanAdd) {
                     highlightClass = 'can-add';
@@ -2352,12 +3379,13 @@ function updateUI() {
             }
         }
 
-        div.className = `meld ${gameState.selectedMeld === idx ? 'selected' : ''} ${meld.owner !== 0 ? 'incorporated' : ''} ${highlightClass}`; 
+        const meuIdx = gameState.multiplayer ? (gameState.mpMeuIdx || 0) : 0;
+        div.className = `meld ${gameState.selectedMeld === idx ? 'selected' : ''} ${meld.owner !== meuIdx ? 'incorporated' : ''} ${highlightClass}`; 
         div.onclick = (e) => { if (!e.target.closest('.card')) selectMeld(idx); };
 
         const ownerTag = document.createElement('div');
         ownerTag.className = 'meld-owner-tag';
-        ownerTag.textContent = gameState.players[meld.owner].name;
+        ownerTag.textContent = (gameState.players && gameState.players[meld.owner]) ? gameState.players[meld.owner].name : '?';
         div.appendChild(ownerTag);
 
         // CORREÇÃO: Ordenação visual correta do coringa
@@ -2398,7 +3426,7 @@ sortedDisplay.forEach(c => {
     }
 
     const deckEl = document.getElementById('deckPile');
-    const isMyTurn = gameState.currentPlayer === 0;
+    const isMyTurn = mpEhMinhaTez();
     if (isMyTurn && !gameState.hasDrawn) {
         deckEl.classList.add('can-draw');
         if (gameState.discardPile.length > 0 && gameState.selectedCards.length >= 2 && !gameState.discardSelected) {
@@ -2421,6 +3449,9 @@ sortedDisplay.forEach(c => {
     });
 
     updateButtons();
+    } catch(e) {
+        console.error('[updateUI]', e);
+    }
 }
 
 function renderCard(card, small, selected) {
@@ -2532,6 +3563,26 @@ function confirmJokerChoices() {
     }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// APPLY JOKER CHOICES - Aplica valores escolhidos aos coringas
+// ═══════════════════════════════════════════════════════════════════
+function applyJokerChoices(cards, choices) {
+    if (!choices || !cards) return;
+    for (const choice of choices) {
+        if (!choice.selectedValue) continue;
+        // Encontrar o coringa correspondente nas cartas pelo ID
+        const joker = cards.find(c => c.isJoker && c.id === choice.joker?.id);
+        if (joker) {
+            joker.jokerValue = choice.selectedValue.rank || choice.selectedValue.value;
+            joker.jokerSuit = choice.selectedValue.suit;
+            // Normalizar jokerValue para rank string
+            if (typeof joker.jokerValue === 'number') {
+                joker.jokerValue = joker.jokerValue === 1 ? 'A' : RANKS[joker.jokerValue - 1];
+            }
+        }
+    }
+}
+
 function hideJokerChoice() {
     document.getElementById('jokerChoiceModal').classList.remove('active');
     pendingJokerChoice = null;
@@ -2587,52 +3638,64 @@ function botChooseJokerValues(jokerChoices, p) {
 }
 
 function updateButtons() {
-    const isMyTurn = gameState.currentPlayer === 0;
-    const hasTableCardsSelected = gameState.selectedTableCards.length > 0;
-    const hasMeldSelected = gameState.selectedMeld !== null;
+    try {
+        if (!gameState.players || !gameState.players.length) return;
+        const isMyTurn = mpEhMinhaTez();
+        const hasTableCardsSelected = gameState.selectedTableCards.length > 0;
+        const hasMeldSelected = gameState.selectedMeld !== null;
 
-    document.getElementById('btnDraw').disabled = !isMyTurn || gameState.hasDrawn;
-    document.getElementById('btnDiscard').disabled = !isMyTurn || !gameState.hasDrawn || gameState.selectedCards.length !== 1 || gameState.canTakeDiscard;
+        const btnDraw = document.getElementById('btnDraw');
+        const btnDiscard = document.getElementById('btnDiscard');
+        const btnSteal = document.getElementById('btnSteal');
+        const btnUndo = document.getElementById('btnUndo');
+        const btnMove = document.getElementById('btnMove');
+        const btnAddToMeld = document.getElementById('btnAddToMeld');
+        const btnMeld = document.getElementById('btnMeld');
 
-    let canSteal = false;
-    if (isMyTurn && gameState.hasDrawn && gameState.selectedCards.length === 1 && hasMeldSelected && !gameState.canTakeDiscard) {
-        const meld = gameState.tableMelds[gameState.selectedMeld];
-        const selectedCard = gameState.players[0].hand.find(c => gameState.selectedCards.includes(c.id));
-        // REGRAS NOVAS: Não pode usar coringa da mão, jogo deve ter > 3 cartas
-        // E não pode usar carta recém-extraída da mesa
-        if (meld && meld.cards.length >= 3 && selectedCard && !selectedCard.isJoker 
-            && !gameState.cardsExtractedThisTurn.includes(selectedCard.id)) {
-            // Verificar se existe coringa que pode ser roubado pela carta selecionada
-            canSteal = meld.cards.some(c => {
-                if (!c.isJoker) return false;
-                if (meld.type === 'sequence') {
-                    return c.jokerValue === selectedCard.rank && c.jokerSuit === selectedCard.suit;
-                } else {
-                    return c.jokerValue === selectedCard.rank;
-                }
-            });
+        if (btnDraw) btnDraw.disabled = !isMyTurn || gameState.hasDrawn;
+        if (btnDiscard) btnDiscard.disabled = !isMyTurn || !gameState.hasDrawn || gameState.selectedCards.length !== 1 || gameState.canTakeDiscard;
+
+        let canSteal = false;
+        if (isMyTurn && gameState.hasDrawn && gameState.selectedCards.length === 1 && hasMeldSelected && !gameState.canTakeDiscard) {
+            const meld = gameState.tableMelds[gameState.selectedMeld];
+            const p = mpMeuPlayer();
+            const selectedCard = p && p.hand ? p.hand.find(c => gameState.selectedCards.includes(c.id)) : null;
+            if (meld && meld.cards && meld.cards.length >= 3 && selectedCard && !selectedCard.isJoker 
+                && !gameState.cardsExtractedThisTurn.includes(selectedCard.id)) {
+                canSteal = meld.cards.some(c => {
+                    if (!c.isJoker) return false;
+                    if (meld.type === 'sequence') {
+                        return c.jokerValue === selectedCard.rank && c.jokerSuit === selectedCard.suit;
+                    } else {
+                        return c.jokerValue === selectedCard.rank;
+                    }
+                });
+            }
         }
-    }
-    document.getElementById('btnSteal').disabled = !canSteal;
-    document.getElementById('btnUndo').disabled = !turnSnapshot || !isMyTurn || gameState.canTakeDiscard;
-    document.getElementById('btnMove').disabled = !isMyTurn || !gameState.hasDrawn || !hasTableCardsSelected || gameState.canTakeDiscard;
+        if (btnSteal) btnSteal.disabled = !canSteal;
+        if (btnUndo) btnUndo.disabled = !turnSnapshot || !isMyTurn || gameState.canTakeDiscard;
+        if (btnMove) btnMove.disabled = !isMyTurn || !gameState.hasDrawn || !hasTableCardsSelected || gameState.canTakeDiscard;
 
-    let canAdd = false;
-    if (isMyTurn && gameState.hasDrawn && hasMeldSelected && gameState.selectedCards.length >= 1 && !gameState.canTakeDiscard) {
-        const meld = gameState.tableMelds[gameState.selectedMeld];
-        if (meld) {
-            const selectedCards = gameState.players[0].hand.filter(c => gameState.selectedCards.includes(c.id));
-            canAdd = selectedCards.length > 0 && selectedCards.every(c => canAddToMeld(meld, c));
+        let canAdd = false;
+        if (isMyTurn && gameState.hasDrawn && hasMeldSelected && gameState.selectedCards.length >= 1 && !gameState.canTakeDiscard) {
+            const meld = gameState.tableMelds[gameState.selectedMeld];
+            const p = mpMeuPlayer();
+            if (meld && p && p.hand) {
+                const selectedCards = p.hand.filter(c => gameState.selectedCards.includes(c.id));
+                canAdd = selectedCards.length > 0 && selectedCards.every(c => canAddToMeld(meld, c));
+            }
         }
-    }
-    document.getElementById('btnAddToMeld').disabled = !canAdd;
+        if (btnAddToMeld) btnAddToMeld.disabled = !canAdd;
 
-    const numSelected = gameState.selectedCards.length;
-    let canMeld = isMyTurn && (gameState.hasDrawn || gameState.discardSelected) && 
-                  ((gameState.canTakeDiscard && numSelected >= 2) || 
-                   (gameState.discardSelected && numSelected >= 2) || 
-                   numSelected >= 3);
-    document.getElementById('btnMeld').disabled = !canMeld;
+        const numSelected = gameState.selectedCards.length;
+        let canMeld = isMyTurn && (gameState.hasDrawn || gameState.discardSelected) && 
+                      ((gameState.canTakeDiscard && numSelected >= 2) || 
+                       (gameState.discardSelected && numSelected >= 2) || 
+                       numSelected >= 3);
+        if (btnMeld) btnMeld.disabled = !canMeld;
+    } catch(e) {
+        console.error('[updateButtons]', e);
+    }
 }
 updatePlayerInputs();
 </script>
@@ -2655,31 +3718,19 @@ updatePlayerInputs();
 <button id="tutorialReopenBtn" onclick="showTutorialModal()" style="display:none;position:fixed;bottom:16px;right:16px;z-index:1500;background:#c8a84b;color:#1a3a2a;border:none;border-radius:50px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4);">🎓 Tutorial</button>
 
 <script>
+// Service Worker desabilitado — interfere com Firebase Realtime
 if ('serviceWorker' in navigator) {
-    const swCode = `
-const CACHE = 'furtado-v1';
-self.addEventListener('install', e => {
-    e.waitUntil(caches.open(CACHE).then(c => c.addAll(['.'])));
-    self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-    e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
-    self.clients.claim();
-});
-self.addEventListener('fetch', e => {
-    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-    })));
-});
-    `;
-    const blob = new Blob([swCode], {type: 'application/javascript'});
-    const swUrl = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(swUrl).then(() => {
-        console.log('Service Worker registrado.');
-    }).catch(e => console.log('SW erro:', e));
+    navigator.serviceWorker.getRegistrations().then(regs => {
+        regs.forEach(r => r.unregister());
+    });
 }
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log('FURTADO pronto para uso offline!'))
+      .catch((err) => console.log('Erro ao registrar Service Worker:', err));
+  }
 </script>
 </body>
 </html>
