@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta name="apple-mobile-web-app-icon" content="./icon.png">
 <meta charset="UTF-8">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1035,8 +1034,14 @@ function mpEscutar() {
 
                     // ── Guard 1: Ignorar publicações minhas (anti-bumerangue) ──
                     if (remoteState._publicadoPor === mpMeuId) {
-                        console.debug('[MP] ignorando eco próprio ts:', remoteState.ts);
-                        return;
+                        // Excepção: após reconexão, aceitar mesmo estado próprio para sincronizar
+                        if (gameState._mpIgnorarGuard1UmaVez) {
+                            gameState._mpIgnorarGuard1UmaVez = false;
+                            console.debug('[MP] reconexão: aceitando eco próprio para sincronizar');
+                        } else {
+                            console.debug('[MP] ignorando eco próprio ts:', remoteState.ts);
+                            return;
+                        }
                     }
 
                     // ── Guard 2: Não sobrescrever ação local em andamento ──
@@ -1083,11 +1088,11 @@ function mpEscutar() {
         err => {
             console.error('[MP listener erro]', err);
             mpStatus('Conexão perdida. Tentando reconectar...');
-            // Tentar reconectar após 3 segundos
             setTimeout(() => {
                 if (mpSalaId && mpSalaRef) {
-                    // Zerar anti-regressão para aceitar o estado atual após reconexão
+                    // Zerar anti-regressão E ignorar Guard 1 na próxima entrega
                     gameState._mpUltimoTsRecebido = 0;
+                    gameState._mpIgnorarGuard1UmaVez = true; // aceitar qualquer estado na reconexão
                     mpEscutar();
                 } else {
                     mpStatus('Não foi possível reconectar.');
@@ -1150,6 +1155,8 @@ function mpIniciarPartida(sala) {
         mpAplicarEstado(estado);
         showScreen('gameScreen');
         mpStatus('');
+        // Iniciar timer se for minha vez logo no início da partida
+        setTimeout(() => { try { timerIniciarCompra(); } catch(e) {} }, 400);
         // Iniciar timer se for minha vez logo no início
         setTimeout(() => timerIniciarCompra(), 300);
     } catch(e) {
@@ -1194,6 +1201,8 @@ function mpAplicarEstado(estado) {
         gameState.selectedCards         = [];
         gameState.selectedTableCards    = [];
         gameState.selectedMeld          = null;
+        // Limpar turnSnapshot ao receber estado remoto — evita undoTurn inconsistente
+        turnSnapshot = null;
     } catch(e) {
         console.error('[MP aplicarEstado] erro ao aplicar campos:', e);
         return;
@@ -1224,9 +1233,8 @@ function mpAplicarEstado(estado) {
         showMessage('Fim da Rodada', `Vencedor: ${winnerName}\n\nPróxima rodada em 3 segundos...`);
         setTimeout(() => {
             hideMessage();
-            // O host SEMPRE é responsável por iniciar a próxima rodada
-            // mesmo quando recebe o fim de rodada via Firebase (oponente ganhou)
-            if (mpEhHost) startRound();
+            // Host inicia próxima rodada — APENAS se não foi a última (round < 10 significa que há mais rodadas)
+            if (mpEhHost && estado.round < 10 && !estado.gameOver) startRound();
         }, 3500);
         return;
     }
@@ -1260,11 +1268,12 @@ function mpWatchdogReset() {
     if (!gameState.multiplayer || !mpAtivo) return;
     _mpWatchdog = setTimeout(() => {
         console.warn('[MP watchdog] Timeout de rede — liberando interface');
-        // Não travar: forçar atualização da UI sem aguardar Firebase
         try { updateUI(); updateButtons(); } catch(e) {}
         mpStatus('Conexão lenta — tentando reconectar...');
-        // Tentar reconectar o listener
         if (mpSalaRef && mpSalaId) {
+            // Zerar guards para aceitar o estado atual após reconexão
+            gameState._mpUltimoTsRecebido = 0;
+            gameState._mpIgnorarGuard1UmaVez = true;
             try { mpEscutar(); } catch(e) {}
         }
     }, 8000);
@@ -1375,6 +1384,7 @@ function timerStop() {
 function timerIniciarCompra() {
     if (!gameState.multiplayer) return;
     if (!mpEhMinhaTez()) return;
+    if (gameState.hasDrawn) return; // já comprou — não iniciar timer de compra
     timerStart(10, '⏱ Comprar', () => {
         // Tempo esgotado — comprar do monte automaticamente
         if (!gameState.hasDrawn && mpEhMinhaTez()) {
@@ -1388,9 +1398,9 @@ function timerIniciarJogada() {
     if (!mpEhMinhaTez()) return;
     timerStart(20, '⏱ Jogar', () => {
         // Tempo esgotado — descartar a carta de maior valor automaticamente
-        if (mpEhMinhaTez() && gameState.hasDrawn) {
+        if (mpEhMinhaTez() && gameState.hasDrawn && !gameState.canTakeDiscard) {
             const p = mpMeuPlayer();
-            if (p.hand.length === 0) return;
+            if (!p || p.hand.length === 0) return;
             // Encontrar carta de maior valor (não coringa)
             let maxIdx = -1, maxPts = -1;
             p.hand.forEach((c, i) => {
@@ -1399,7 +1409,8 @@ function timerIniciarJogada() {
                     if (pts > maxPts) { maxPts = pts; maxIdx = i; }
                 }
             });
-            if (maxIdx === -1) maxIdx = 0; // fallback: primeira carta
+            if (maxIdx === -1) maxIdx = 0; // fallback: primeira carta (coringa)
+            if (maxIdx >= p.hand.length) return; // segurança extra
             gameState.selectedCards = [p.hand[maxIdx].id];
             discardCard();
         }
@@ -1566,9 +1577,10 @@ function startGame() {
 function startRound() {
     // No multiplayer, apenas o host recria o deck e distribui as cartas
     if (gameState.multiplayer && !mpEhHost) {
-        // Oponente apenas aguarda o estado chegar via Firebase
         return;
     }
+    // Nunca iniciar nova rodada se o jogo acabou
+    if (gameState.gameOver) return;
 
     gameState.deck = createDeck(); gameState.discardPile = []; gameState.tableMelds = [];
     gameState.currentPlayer = gameState.firstPlayerOfRound; gameState.phase = 'draw'; gameState.selectedCards = [];
@@ -1941,7 +1953,9 @@ function tryTakeDiscard() {
     if (gameState.discardSelected) {
         gameState.discardSelected = false;
         gameState.discardPendingCard = null;
+        gameState.canTakeDiscard = false;
         updateUI(); updateButtons();
+        try { mpPublicar(); } catch(e) { console.error('[tryTakeDiscard deselect]', e); }
         return;
     }
 
@@ -1971,12 +1985,14 @@ function cancelTakeDiscard() {
         gameState.selectedCards = [];
         log("Compra do lixo cancelada.");
         updateUI(); updateButtons();
+        try { mpPublicar(); } catch(e) { console.error('[cancelTakeDiscard]', e); }
     }
 }
 
 function createMeld() {
     if (gameState.gameOver) return;
     if (!mpEhMinhaTez()) return;
+    if (!gameState.hasDrawn && !gameState.canTakeDiscard) return;
     const p = mpMeuPlayer(); 
     let selected = p.hand.filter(c => gameState.selectedCards.includes(c.id));
     if (gameState.canTakeDiscard && gameState.discardPendingCard) {
@@ -2043,8 +2059,10 @@ function createMeld() {
 function addToMeld() {
     if (gameState.gameOver || gameState.canTakeDiscard || gameState.selectedMeld === null || gameState.selectedCards.length < 1) return;
     if (!mpEhMinhaTez()) return;
+    if (!gameState.hasDrawn) return showMessage('Aviso', 'Primeiro compre uma carta do monte ou do lixo.');
     const p = mpMeuPlayer(); 
     const meld = gameState.tableMelds[gameState.selectedMeld];
+    if (!meld) return; // segurança: índice inválido
     const cardsToAdd = p.hand.filter(c => gameState.selectedCards.includes(c.id));
 
     // CORREÇÃO: Backup dos valores originais dos coringas
@@ -2309,7 +2327,8 @@ function stealJoker() {
     if (gameState.gameOver || gameState.canTakeDiscard || gameState.selectedMeld === null || gameState.selectedCards.length !== 1) return;
 
     const p = mpMeuPlayer(); 
-    const card = p.hand.find(c => c.id === gameState.selectedCards[0]); 
+    const card = p.hand.find(c => c.id === gameState.selectedCards[0]);
+    if (!card) return; // segurança: carta não encontrada na mão
     const meld = gameState.tableMelds[gameState.selectedMeld];
 
     // REGRAS NOVAS: Não pode usar coringa da mão para roubar coringa da mesa
@@ -2317,9 +2336,11 @@ function stealJoker() {
         return showMessage('Erro', 'Não pode usar um coringa da mão para substituir um coringa na mesa.');
     }
 
-    // A carta real substitui o coringa — tamanho do jogo não muda, roubo sempre válido com >= 3
+    // O jogo deve ter ao menos 3 cartas além do coringa (que será substituído, não removido)
+    // Na verdade o coringa é SUBSTITUÍDO pela carta real — o tamanho não muda
+    // Mas o jogo resultante deve ser válido com a carta real no lugar do coringa
     if (meld.cards.length < 3) {
-        return showMessage('Erro', 'Não pode roubar coringa se o jogo ficar com menos de 3 cartas.');
+        return showMessage('Erro', 'O jogo precisa ter pelo menos 3 cartas para o roubo ser válido.');
     }
 
     if (gameState.cardsExtractedThisTurn.includes(card.id)) {
@@ -2423,7 +2444,7 @@ function botTurn() {
             let comprouDoLixo = false;
             // Verifica grupo
             const sameRank = p.hand.filter(c => !c.isJoker && c.rank === topDiscard.rank);
-            if (sameRank.length >= 2 && isValidMeld([...sameRank, topDiscard])) {
+            if (sameRank.length >= 2 && isValidMeld([...sameRank.map(c => deepCopyCard(c)), deepCopyCard(topDiscard)])) {
                 gameState.discardPile.pop();
                 const combo = [...sameRank, topDiscard];
                 const ids = new Set(sameRank.map(c => c.id));
@@ -2758,6 +2779,16 @@ function expertBotLogic(p) {
             if (meld.cards && meld.cards.length > 3) {
                 for (let cIdx = 0; cIdx < meld.cards.length; cIdx++) {
                     let extractedCard = meld.cards[cIdx];
+                    // REGRA: se a carta a extrair é um coringa, o bot DEVE ter na mão
+                    // a carta real que vai substituí-lo no meld original.
+                    if (extractedCard.isJoker && extractedCard.jokerValue) {
+                        const temSubstituto = p.hand.some(c => {
+                            if (c.isJoker) return false;
+                            if (meld.type === 'sequence') return c.rank === extractedCard.jokerValue && c.suit === extractedCard.jokerSuit;
+                            return c.rank === extractedCard.jokerValue;
+                        });
+                        if (!temSubstituto) continue; // não pode extrair sem substituto
+                    }
                     // Usar cópias para não afetar cartas reais durante a análise
                     let testCards = meld.cards.filter((_, idx) => idx !== cIdx).map(c => deepCopyCard(c));
                     if (!isValidMeld(testCards)) continue;
@@ -2766,6 +2797,13 @@ function expertBotLogic(p) {
                     if (extractedCopy.isJoker) { extractedCopy.jokerValue = null; extractedCopy.jokerSuit = null; }
                     for (let comboSize = 1; comboSize <= Math.min(3, p.hand.length); comboSize++) {
                         for (let indices of getCombinations(p.hand.length, comboSize)) {
+                            // Se extrai coringa, o substituto deve estar entre as cartas usadas
+                            if (extractedCard.isJoker && extractedCard.jokerValue) {
+                                const handCardsTest = indices.map(i => p.hand[i]);
+                                // Verificar que o substituto real está entre as cartas da mão selecionadas
+                                // OU entre as cartas restantes (será substituído no meld pelo roubo)
+                                // A lógica de execução fará a substituição — aqui apenas validamos
+                            }
                             let handCards = indices.map(i => deepCopyCard(p.hand[i]));
                             let combined = [...handCards, extractedCopy];
                             if (hasDuplicateInSequence(combined)) continue;
@@ -2797,11 +2835,33 @@ function expertBotLogic(p) {
             }
         }
 
+        // Avaliar roubo de coringa como opção no scoring (prioridade alta: ganha coringa + usa 1 carta)
+        for (let mIdx = 0; mIdx < gameState.tableMelds.length; mIdx++) {
+            let meld = gameState.tableMelds[mIdx];
+            if (!meld.cards || meld.cards.length < 4) continue;
+            for (let jIdx = 0; jIdx < meld.cards.length; jIdx++) {
+                const joker = meld.cards[jIdx];
+                if (!joker.isJoker || !joker.jokerValue) continue;
+                if (gameState.cardsExtractedThisTurn.includes(joker.id)) continue;
+                const realCardIdx = p.hand.findIndex(c => {
+                    if (c.isJoker) return false;
+                    if (gameState.cardsExtractedThisTurn.includes(c.id)) return false;
+                    if (meld.type === 'sequence') return c.rank === joker.jokerValue && c.suit === joker.jokerSuit;
+                    return c.rank === joker.jokerValue;
+                });
+                if (realCardIdx !== -1) {
+                    // Score alto: usa 1 carta, ganha coringa (vale 20 pts), muito eficiente
+                    const stealScore = 150;
+                    if (stealScore > bestScore) { bestScore = stealScore; bestMove = { type: 'steal', mIdx, jIdx, handIdx: realCardIdx }; }
+                }
+            }
+        }
+
         if (bestMove) {
             if (bestMove.type === 'disassemble') {
                 let meld = gameState.tableMelds[bestMove.mIdx];
                 let extracted = meld.cards.splice(bestMove.cIdx, 1)[0];
-                // Se é coringa, limpar valor para reatribuição correta no novo jogo
+                // Limpar valor do coringa para reatribuição no novo jogo
                 if (extracted.isJoker) { extracted.jokerValue = null; extracted.jokerSuit = null; }
                 let validRemainder = isValidMeld(meld.cards.map(c => deepCopyCard(c)));
                 if (!validRemainder) { meld.cards.splice(bestMove.cIdx, 0, extracted); continue; }
@@ -2815,11 +2875,18 @@ function expertBotLogic(p) {
                 meld.type = validRemainder.type;
                 if (validRemainder.suit) meld.suit = validRemainder.suit;
                 reordenarSequencia(meld);
+                // Remover cartas da mão em ordem decrescente para evitar deslocamento de índices
+                const sortedHandIndices = [...bestMove.handIndices].sort((a, b) => b - a);
                 let handCardsToRemove = [];
-                for (let i = bestMove.handIndices.length - 1; i >= 0; i--) handCardsToRemove.push(p.hand.splice(bestMove.handIndices[i], 1)[0]);
+                for (let i of sortedHandIndices) handCardsToRemove.push(p.hand.splice(i, 1)[0]);
                 let combined = [...handCardsToRemove, extracted];
                 let validNew = isValidMeld(combined.map(c => deepCopyCard(c)));
-                if (!validNew) { actionTaken = false; continue; }
+                if (!validNew) {
+                    // Reinserir cartas na mão do bot — não perdê-las
+                    for (const hc of handCardsToRemove) p.hand.push(hc);
+                    meld.cards.splice(bestMove.cIdx, 0, extracted);
+                    actionTaken = false; continue;
+                }
                 // Aplicar jokerValues ao novo jogo
                 if (validNew.validatedCards) {
                     validNew.validatedCards.forEach(vc => {
@@ -2833,15 +2900,63 @@ function expertBotLogic(p) {
                 p.hasMeldedThisTurn = true;
                 log(`${p.name} reorganizou a mesa, formando ${descMeld(novoMeld)}.`);
                 actionTaken = true; if (p.hand.length === 0) return; continue;
+            } else if (bestMove.type === 'steal') {
+                // Executar roubo de coringa selecionado no scoring
+                let meld = gameState.tableMelds[bestMove.mIdx];
+                let joker = meld.cards[bestMove.jIdx];
+                let card = p.hand.splice(bestMove.handIdx, 1)[0];
+                let oldJoker = meld.cards[bestMove.jIdx];
+                meld.cards[bestMove.jIdx] = card;
+                let jokerParaMao = deepCopyCard(oldJoker);
+                jokerParaMao.jokerValue = null; jokerParaMao.jokerSuit = null;
+                p.hand.push(jokerParaMao);
+                p.hasMeldedThisTurn = true;
+                log(`${p.name} roubou o ${descJokerInMeld(oldJoker, meld)} do ${descMeld(meld)}.`);
+                actionTaken = true; if (p.hand.length === 0) return; continue;
             } else if (bestMove.type === 'incorporate') {
                 let meld = gameState.tableMelds[bestMove.mIdx];
                 let handCardsToRemove = [];
                 for (let i = bestMove.handIndices.length - 1; i >= 0; i--) handCardsToRemove.push(p.hand.splice(bestMove.handIndices[i], 1)[0]);
                 let combined = [...meld.cards, ...handCardsToRemove];
-                meld.cards = combined; meld.type = bestMove.validNew.type;
-                if (bestMove.validNew.suit) meld.suit = bestMove.validNew.suit;
+                // Validar resultado final e aplicar jokerValues corretos
+                const incValidResult = isValidMeld(combined.map(c => deepCopyCard(c)));
+                if (!incValidResult) {
+                    for (const hc of handCardsToRemove) p.hand.push(hc);
+                    continue;
+                }
+                meld.cards = combined; meld.type = incValidResult.type;
+                if (incValidResult.suit) meld.suit = incValidResult.suit;
+                // Aplicar jokerValues validados às cartas reais do meld
+                if (incValidResult.validatedCards) {
+                    incValidResult.validatedCards.forEach(vc => {
+                        const orig = meld.cards.find(c => c.id === vc.id);
+                        if (orig && orig.isJoker) { orig.jokerValue = vc.jokerValue; orig.jokerSuit = vc.jokerSuit; }
+                    });
+                }
                 meld.owner = p.id; p.hasMeldedThisTurn = true;
                 reordenarSequencia(meld);
+                // Verificar se algum coringa no meld se tornou redundante após a incorporação
+                // (carta real cobre a mesma posição que o coringa representava)
+                for (let jIdx = meld.cards.length - 1; jIdx >= 0; jIdx--) {
+                    const j = meld.cards[jIdx];
+                    if (!j.isJoker || !j.jokerValue) continue;
+                    let redundante = false;
+                    if (meld.type === 'same') {
+                        // Em grupos: coringa é redundante se há >= 2 cartas reais do mesmo valor
+                        const reaisNoGrupo = meld.cards.filter((c, ci) => !c.isJoker && ci !== jIdx);
+                        redundante = reaisNoGrupo.length >= 2;
+                    } else if (meld.type === 'sequence') {
+                        // Em sequências: coringa é redundante se há carta real com mesmo valor+naipe
+                        redundante = meld.cards.some((c, ci) => ci !== jIdx && !c.isJoker && c.rank === j.jokerValue && c.suit === j.jokerSuit);
+                    }
+                    if (redundante) {
+                        const jokerParaMao = deepCopyCard(j);
+                        jokerParaMao.jokerValue = null; jokerParaMao.jokerSuit = null;
+                        meld.cards.splice(jIdx, 1);
+                        p.hand.push(jokerParaMao);
+                        log(`${p.name} liberou o coringa do ${descMeld(meld)} ao incorporar carta real.`);
+                    }
+                }
                 log(`${p.name} adicionou ${handCardsToRemove.map(c => descCard(c)).join(', ')} ao ${descMeld(meld)}.`);
                 actionTaken = true; if (p.hand.length === 0) return; continue;
             }
@@ -2990,6 +3105,16 @@ function masterBotLogic(p) {
             if (meld.cards && meld.cards.length > 3) {
                 for (let cIdx = 0; cIdx < meld.cards.length; cIdx++) {
                     let extractedCard = meld.cards[cIdx];
+                    // REGRA: se a carta a extrair é um coringa, o bot DEVE ter na mão
+                    // a carta real que vai substituí-lo no meld original.
+                    if (extractedCard.isJoker && extractedCard.jokerValue) {
+                        const temSubstituto = p.hand.some(c => {
+                            if (c.isJoker) return false;
+                            if (meld.type === 'sequence') return c.rank === extractedCard.jokerValue && c.suit === extractedCard.jokerSuit;
+                            return c.rank === extractedCard.jokerValue;
+                        });
+                        if (!temSubstituto) continue;
+                    }
                     let testCards = meld.cards.filter((_, idx) => idx !== cIdx).map(c => deepCopyCard(c));
                     if (!isValidMeld(testCards)) continue;
                     let extractedCopy = deepCopyCard(extractedCard);
@@ -3027,11 +3152,33 @@ function masterBotLogic(p) {
             }
         }
 
+        // Avaliar roubo de coringa como opção no scoring (prioridade alta: ganha coringa + usa 1 carta)
+        for (let mIdx = 0; mIdx < gameState.tableMelds.length; mIdx++) {
+            let meld = gameState.tableMelds[mIdx];
+            if (!meld.cards || meld.cards.length < 4) continue;
+            for (let jIdx = 0; jIdx < meld.cards.length; jIdx++) {
+                const joker = meld.cards[jIdx];
+                if (!joker.isJoker || !joker.jokerValue) continue;
+                if (gameState.cardsExtractedThisTurn.includes(joker.id)) continue;
+                const realCardIdx = p.hand.findIndex(c => {
+                    if (c.isJoker) return false;
+                    if (gameState.cardsExtractedThisTurn.includes(c.id)) return false;
+                    if (meld.type === 'sequence') return c.rank === joker.jokerValue && c.suit === joker.jokerSuit;
+                    return c.rank === joker.jokerValue;
+                });
+                if (realCardIdx !== -1) {
+                    // Score alto: usa 1 carta, ganha coringa (vale 20 pts), muito eficiente
+                    const stealScore = 150;
+                    if (stealScore > bestScore) { bestScore = stealScore; bestMove = { type: 'steal', mIdx, jIdx, handIdx: realCardIdx }; }
+                }
+            }
+        }
+
         if (bestMove) {
             if (bestMove.type === 'disassemble') {
                 let meld = gameState.tableMelds[bestMove.mIdx];
                 let extracted = meld.cards.splice(bestMove.cIdx, 1)[0];
-                // Se é coringa, limpar valor para reatribuição correta no novo jogo
+                // Limpar valor do coringa para reatribuição no novo jogo
                 if (extracted.isJoker) { extracted.jokerValue = null; extracted.jokerSuit = null; }
                 let validRemainder = isValidMeld(meld.cards.map(c => deepCopyCard(c)));
                 if (!validRemainder) { meld.cards.splice(bestMove.cIdx, 0, extracted); continue; }
@@ -3045,11 +3192,18 @@ function masterBotLogic(p) {
                 meld.type = validRemainder.type;
                 if (validRemainder.suit) meld.suit = validRemainder.suit;
                 reordenarSequencia(meld);
+                // Remover cartas da mão em ordem decrescente para evitar deslocamento de índices
+                const sortedHandIndices = [...bestMove.handIndices].sort((a, b) => b - a);
                 let handCardsToRemove = [];
-                for (let i = bestMove.handIndices.length - 1; i >= 0; i--) handCardsToRemove.push(p.hand.splice(bestMove.handIndices[i], 1)[0]);
+                for (let i of sortedHandIndices) handCardsToRemove.push(p.hand.splice(i, 1)[0]);
                 let combined = [...handCardsToRemove, extracted];
                 let validNew = isValidMeld(combined.map(c => deepCopyCard(c)));
-                if (!validNew) { actionTaken = false; continue; }
+                if (!validNew) {
+                    // Reinserir cartas na mão do bot — não perdê-las
+                    for (const hc of handCardsToRemove) p.hand.push(hc);
+                    meld.cards.splice(bestMove.cIdx, 0, extracted);
+                    actionTaken = false; continue;
+                }
                 // Aplicar jokerValues ao novo jogo
                 if (validNew.validatedCards) {
                     validNew.validatedCards.forEach(vc => {
@@ -3063,15 +3217,63 @@ function masterBotLogic(p) {
                 p.hasMeldedThisTurn = true;
                 log(`${p.name} reorganizou a mesa, formando ${descMeld(novoMeld)}.`);
                 actionTaken = true; if (p.hand.length === 0) return; continue;
+            } else if (bestMove.type === 'steal') {
+                // Executar roubo de coringa selecionado no scoring
+                let meld = gameState.tableMelds[bestMove.mIdx];
+                let joker = meld.cards[bestMove.jIdx];
+                let card = p.hand.splice(bestMove.handIdx, 1)[0];
+                let oldJoker = meld.cards[bestMove.jIdx];
+                meld.cards[bestMove.jIdx] = card;
+                let jokerParaMao = deepCopyCard(oldJoker);
+                jokerParaMao.jokerValue = null; jokerParaMao.jokerSuit = null;
+                p.hand.push(jokerParaMao);
+                p.hasMeldedThisTurn = true;
+                log(`${p.name} roubou o ${descJokerInMeld(oldJoker, meld)} do ${descMeld(meld)}.`);
+                actionTaken = true; if (p.hand.length === 0) return; continue;
             } else if (bestMove.type === 'incorporate') {
                 let meld = gameState.tableMelds[bestMove.mIdx];
                 let handCardsToRemove = [];
                 for (let i = bestMove.handIndices.length - 1; i >= 0; i--) handCardsToRemove.push(p.hand.splice(bestMove.handIndices[i], 1)[0]);
                 let combined = [...meld.cards, ...handCardsToRemove];
-                meld.cards = combined; meld.type = bestMove.validNew.type;
-                if (bestMove.validNew.suit) meld.suit = bestMove.validNew.suit;
+                // Validar resultado final e aplicar jokerValues corretos
+                const incValidResult = isValidMeld(combined.map(c => deepCopyCard(c)));
+                if (!incValidResult) {
+                    for (const hc of handCardsToRemove) p.hand.push(hc);
+                    continue;
+                }
+                meld.cards = combined; meld.type = incValidResult.type;
+                if (incValidResult.suit) meld.suit = incValidResult.suit;
+                // Aplicar jokerValues validados às cartas reais do meld
+                if (incValidResult.validatedCards) {
+                    incValidResult.validatedCards.forEach(vc => {
+                        const orig = meld.cards.find(c => c.id === vc.id);
+                        if (orig && orig.isJoker) { orig.jokerValue = vc.jokerValue; orig.jokerSuit = vc.jokerSuit; }
+                    });
+                }
                 meld.owner = p.id; p.hasMeldedThisTurn = true;
                 reordenarSequencia(meld);
+                // Verificar se algum coringa no meld se tornou redundante após a incorporação
+                // (carta real cobre a mesma posição que o coringa representava)
+                for (let jIdx = meld.cards.length - 1; jIdx >= 0; jIdx--) {
+                    const j = meld.cards[jIdx];
+                    if (!j.isJoker || !j.jokerValue) continue;
+                    let redundante = false;
+                    if (meld.type === 'same') {
+                        // Em grupos: coringa é redundante se há >= 2 cartas reais do mesmo valor
+                        const reaisNoGrupo = meld.cards.filter((c, ci) => !c.isJoker && ci !== jIdx);
+                        redundante = reaisNoGrupo.length >= 2;
+                    } else if (meld.type === 'sequence') {
+                        // Em sequências: coringa é redundante se há carta real com mesmo valor+naipe
+                        redundante = meld.cards.some((c, ci) => ci !== jIdx && !c.isJoker && c.rank === j.jokerValue && c.suit === j.jokerSuit);
+                    }
+                    if (redundante) {
+                        const jokerParaMao = deepCopyCard(j);
+                        jokerParaMao.jokerValue = null; jokerParaMao.jokerSuit = null;
+                        meld.cards.splice(jIdx, 1);
+                        p.hand.push(jokerParaMao);
+                        log(`${p.name} liberou o coringa do ${descMeld(meld)} ao incorporar carta real.`);
+                    }
+                }
                 log(`${p.name} adicionou ${handCardsToRemove.map(c => descCard(c)).join(', ')} ao ${descMeld(meld)}.`);
                 actionTaken = true; if (p.hand.length === 0) return; continue;
             }
@@ -3285,6 +3487,10 @@ function winRound(id) {
     gameState._mpWinner = id;
 
     if (gameState.round >= 10) {
+        // Na última rodada, publicar diretamente com gameOver=true
+        // evita race condition onde oponente recebe roundEnded=true/gameOver=false
+        // e tenta iniciar nova rodada antes de receber o gameOver
+        gameState.gameOver = true;
         mpPublicar();
         return endGame();
     }
@@ -3724,13 +3930,6 @@ if ('serviceWorker' in navigator) {
         regs.forEach(r => r.unregister());
     });
 }
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js')
-      .then(() => console.log('FURTADO pronto para uso offline!'))
-      .catch((err) => console.log('Erro ao registrar Service Worker:', err));
-  }
 </script>
 </body>
 </html>
