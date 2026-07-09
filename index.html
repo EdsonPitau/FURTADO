@@ -2949,7 +2949,7 @@ function expertBotLogic(p) {
                         // Em sequências: coringa é redundante se há carta real com mesmo valor+naipe
                         redundante = meld.cards.some((c, ci) => ci !== jIdx && !c.isJoker && c.rank === j.jokerValue && c.suit === j.jokerSuit);
                     }
-                    if (redundante) {
+                    if (redundante && meld.cards.length > 3) {
                         const jokerParaMao = deepCopyCard(j);
                         jokerParaMao.jokerValue = null; jokerParaMao.jokerSuit = null;
                         meld.cards.splice(jIdx, 1);
@@ -3059,10 +3059,15 @@ function expertBotLogic(p) {
     let discardIdx = -1;
     let opponentNearWin = gameState.players.some(op => op.id !== p.id && op.hand.length <= 2);
     if (opponentNearWin) {
-        let priorityOrder = ['JOKER', 'A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
+        // CORREÇÃO: lista antiga começava com 'JOKER' e colocava 'A' (1 pt) antes de
+        // K/Q/J (13/12/11 pts) — descartava o coringa primeiro, contrariando a regra
+        // de nunca descartar coringa a menos que seja a única opção, e descartava a
+        // carta de MENOR valor antes das de maior valor. Ordem correta: maior pontuação
+        // primeiro, sem coringa (protegido pelo fallback abaixo).
+        let priorityOrder = ['K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2', 'A'];
         for (let rank of priorityOrder) {
             for (let i = 0; i < p.hand.length; i++) {
-                if ((rank === 'JOKER' && p.hand[i].isJoker) || p.hand[i].rank === rank) { discardIdx = i; break; }
+                if (!p.hand[i].isJoker && p.hand[i].rank === rank) { discardIdx = i; break; }
             }
             if (discardIdx !== -1) break;
         }
@@ -3266,7 +3271,7 @@ function masterBotLogic(p) {
                         // Em sequências: coringa é redundante se há carta real com mesmo valor+naipe
                         redundante = meld.cards.some((c, ci) => ci !== jIdx && !c.isJoker && c.rank === j.jokerValue && c.suit === j.jokerSuit);
                     }
-                    if (redundante) {
+                    if (redundante && meld.cards.length > 3) {
                         const jokerParaMao = deepCopyCard(j);
                         jokerParaMao.jokerValue = null; jokerParaMao.jokerSuit = null;
                         meld.cards.splice(jIdx, 1);
