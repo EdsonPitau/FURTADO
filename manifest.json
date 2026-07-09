@@ -3,16 +3,17 @@
   "short_name": "FURTADO",
   "description": "Sistema de RPG e Ferramentas de Game Design",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#1e1e1e",
   "theme_color": "#1e1e1e",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "./icon.png?v=1",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
