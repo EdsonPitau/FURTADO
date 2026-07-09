@@ -1,19 +1,50 @@
 {
-  "name": "Sistema FURTADO RPG",
+  "name": "FURTADO - Jogo de Cartas Brasileiro",
   "short_name": "FURTADO",
-  "description": "Sistema de RPG e Ferramentas de Game Design",
+  "description": "Jogo de cartas para 2-4 jogadores. Baixe jogos, forme sequências e grupos. Jogue offline contra bots ou online com amigos via código de sala.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#1e1e1e",
-  "theme_color": "#1e1e1e",
+  "theme_color": "#1a5f2a",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "./icon.png?v=1",
+      "src": "./icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["games"],
+  "screenshots": [
+    {
+      "src": "./icon.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Jogar Offline",
+      "short_name": "Offline",
+      "description": "Iniciar partida contra bots",
+      "url": "./index.html?mode=solo",
+      "icons": [{ "src": "./icon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Jogar Online",
+      "short_name": "Online",
+      "description": "Entrar em sala multiplayer",
+      "url": "./index.html?mode=multiplayer",
+      "icons": [{ "src": "./icon.png", "sizes": "192x192" }]
     }
   ]
 }
